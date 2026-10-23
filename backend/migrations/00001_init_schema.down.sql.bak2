@@ -1,0 +1,21 @@
+-- +goose Down
+-- Rollback initial schema
+
+DROP TRIGGER IF EXISTS update_usuario_updated_at ON usuario;
+DROP TRIGGER IF EXISTS update_papel_updated_at ON papel;
+DROP TRIGGER IF EXISTS update_loja_updated_at ON loja;
+DROP TRIGGER IF EXISTS update_empresa_updated_at ON empresa;
+
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+DROP TABLE IF EXISTS auditoria_log;
+DROP TABLE IF EXISTS usuario_loja_papel;
+DROP TABLE IF EXISTS usuario;
+DROP TABLE IF EXISTS papel_permissao;
+DROP TABLE IF EXISTS permissao;
+DROP TABLE IF EXISTS papel;
+DROP TABLE IF EXISTS loja;
+DROP TABLE IF EXISTS empresa;
+
+DROP EXTENSION IF EXISTS "pgcrypto";
+DROP EXTENSION IF EXISTS "uuid-ossp";
