@@ -5,7 +5,7 @@ CMD_PATH=./cmd/api
 MIGRATIONS_DIR=./migrations
 SQLC_CONFIG=./sqlc.yaml
 
-DATABASE_URL ?= postgres://intelligate:intelligate@localhost:5432/intelligate_erp?sslmode=disable
+DATABASE_URL ?= postgres://postgres:postgres@localhost:5433/intelligate?sslmode=disable
 
 help:
 	@echo "Available targets:"

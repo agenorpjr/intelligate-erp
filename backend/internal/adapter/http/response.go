@@ -32,3 +32,7 @@ func RespondError(w http.ResponseWriter, status int, code, message, detail strin
 		},
 	})
 }
+
+func DecodeJSON(r *http.Request, v interface{}) error {
+	return json.NewDecoder(r.Body).Decode(v)
+}

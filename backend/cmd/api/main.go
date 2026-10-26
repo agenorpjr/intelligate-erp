@@ -10,8 +10,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/intelligate/erp/backend/internal/adapter/db"
 	httpadapter "github.com/intelligate/erp/backend/internal/adapter/http"
 	"github.com/intelligate/erp/backend/internal/config"
+	"github.com/intelligate/erp/backend/internal/usecase"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -43,6 +45,21 @@ func main() {
 	}
 	log.Info().Msg("Database connection established")
 
+	// Initialize repositories
+	empresaRepo := db.NewEmpresaRepository(dbpool)
+	lojaRepo := db.NewLojaRepository(dbpool)
+	usuarioRepo := db.NewUsuarioRepository(dbpool)
+	auditoriaRepo := db.NewAuditoriaRepository(dbpool)
+
+	// Initialize usecases
+	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	lojaUsecase := usecase.NewLojaUsecase(lojaRepo, empresaRepo, auditoriaRepo)
+
+	// Initialize handlers
+	authHandler := httpadapter.NewAuthHandler(authUsecase)
+	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
+	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
+
 	// Create router
 	r := chi.NewRouter()
 
@@ -56,12 +73,22 @@ func main() {
 	// Health routes
 	httpadapter.RegisterHealthRoutes(r, cfg)
 
-	// API v1 routes (placeholder for future)
+	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			httpadapter.RespondJSON(w, http.StatusOK, map[string]string{
-				"message": "IntelliGate ERP API v1",
-			})
+		// Public routes
+		r.Post("/auth/login", authHandler.Login)
+
+		// Protected routes
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware.RequireAuth)
+			r.Get("/me", authHandler.Me)
+
+			// Lojas
+			r.Post("/lojas", lojaHandler.Criar)
+			r.Get("/lojas", lojaHandler.Listar)
+			r.Get("/lojas/{id}", lojaHandler.BuscarPorID)
+			r.Put("/lojas/{id}", lojaHandler.Atualizar)
+			r.Delete("/lojas/{id}", lojaHandler.Deletar)
 		})
 	})
 
