@@ -12,43 +12,93 @@ import (
 
 type Querier interface {
 	CreateAuditoria(ctx context.Context, arg CreateAuditoriaParams) (Auditorium, error)
+	// Categoria Canônica
+	CreateCategoriaCanonica(ctx context.Context, arg CreateCategoriaCanonicaParams) (CategoriasCanonica, error)
 	CreateEmpresa(ctx context.Context, arg CreateEmpresaParams) (Empresa, error)
+	// Evento Ingestão
+	CreateEventoIngestao(ctx context.Context, arg CreateEventoIngestaoParams) (EventosIngestao, error)
 	CreateLoja(ctx context.Context, arg CreateLojaParams) (Loja, error)
 	CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei, error)
 	CreatePapelPermissao(ctx context.Context, arg CreatePapelPermissaoParams) error
+	// PDV Origem
+	CreatePdvOrigem(ctx context.Context, arg CreatePdvOrigemParams) (PdvsOrigem, error)
+	// Pedido Canônico
+	CreatePedidoCanonico(ctx context.Context, arg CreatePedidoCanonicoParams) (PedidosCanonico, error)
+	// Pedido Item Canônico
+	CreatePedidoItemCanonico(ctx context.Context, arg CreatePedidoItemCanonicoParams) (PedidoItensCanonico, error)
+	// Pedido Pagamento Canônico
+	CreatePedidoPagamentoCanonico(ctx context.Context, arg CreatePedidoPagamentoCanonicoParams) (PedidoPagamentosCanonico, error)
 	CreatePermissao(ctx context.Context, arg CreatePermissaoParams) (Permisso, error)
+	// Produto Canônico
+	CreateProdutoCanonico(ctx context.Context, arg CreateProdutoCanonicoParams) (ProdutosCanonico, error)
 	CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (Usuario, error)
 	CreateUsuarioPapel(ctx context.Context, arg CreateUsuarioPapelParams) (UsuariosPapei, error)
+	DeleteCategoriaCanonica(ctx context.Context, id uuid.UUID) error
 	DeleteEmpresa(ctx context.Context, id uuid.UUID) error
+	DeleteEventoIngestao(ctx context.Context, id uuid.UUID) error
 	DeleteLoja(ctx context.Context, id uuid.UUID) error
 	DeletePapel(ctx context.Context, id uuid.UUID) error
 	DeletePapelPermissao(ctx context.Context, arg DeletePapelPermissaoParams) error
+	DeletePdvOrigem(ctx context.Context, id uuid.UUID) error
+	DeletePedidoCanonico(ctx context.Context, id uuid.UUID) error
+	DeletePedidoItemCanonico(ctx context.Context, id uuid.UUID) error
+	DeletePedidoItensByPedido(ctx context.Context, pedidoID uuid.UUID) error
+	DeletePedidoPagamentoCanonico(ctx context.Context, id uuid.UUID) error
+	DeletePedidoPagamentosByPedido(ctx context.Context, pedidoID uuid.UUID) error
+	DeleteProdutoCanonico(ctx context.Context, id uuid.UUID) error
 	DeleteUsuario(ctx context.Context, id uuid.UUID) error
 	DeleteUsuarioPapel(ctx context.Context, id uuid.UUID) error
+	GetCategoriaCanonica(ctx context.Context, id uuid.UUID) (CategoriasCanonica, error)
 	GetEmpresa(ctx context.Context, id uuid.UUID) (Empresa, error)
 	GetEmpresaByCNPJ(ctx context.Context, cnpj string) (Empresa, error)
+	GetEventoIngestao(ctx context.Context, id uuid.UUID) (EventosIngestao, error)
+	GetEventoIngestaoByIdempotencyKey(ctx context.Context, arg GetEventoIngestaoByIdempotencyKeyParams) (EventosIngestao, error)
 	GetLoja(ctx context.Context, id uuid.UUID) (Loja, error)
 	GetPapel(ctx context.Context, id uuid.UUID) (Papei, error)
+	GetPdvOrigem(ctx context.Context, id uuid.UUID) (PdvsOrigem, error)
+	GetPdvOrigemByCodigo(ctx context.Context, arg GetPdvOrigemByCodigoParams) (PdvsOrigem, error)
+	GetPedidoCanonico(ctx context.Context, id uuid.UUID) (PedidosCanonico, error)
+	GetPedidoCanonicoByIdempotencyKey(ctx context.Context, arg GetPedidoCanonicoByIdempotencyKeyParams) (PedidosCanonico, error)
+	GetPedidoItemCanonico(ctx context.Context, id uuid.UUID) (PedidoItensCanonico, error)
+	GetPedidoPagamentoCanonico(ctx context.Context, id uuid.UUID) (PedidoPagamentosCanonico, error)
 	GetPermissao(ctx context.Context, id uuid.UUID) (Permisso, error)
 	GetPermissaoByChave(ctx context.Context, chave string) (Permisso, error)
+	GetProdutoCanonico(ctx context.Context, id uuid.UUID) (ProdutosCanonico, error)
+	GetProdutoCanonicoBySKU(ctx context.Context, arg GetProdutoCanonicoBySKUParams) (ProdutosCanonico, error)
 	GetUsuario(ctx context.Context, id uuid.UUID) (Usuario, error)
 	GetUsuarioByEmail(ctx context.Context, email string) (Usuario, error)
 	GetUsuarioByEmailAndEmpresa(ctx context.Context, arg GetUsuarioByEmailAndEmpresaParams) (Usuario, error)
 	GetUsuarioPapel(ctx context.Context, id uuid.UUID) (UsuariosPapei, error)
+	// Resumo de Vendas
+	GetVendasResumo(ctx context.Context, arg GetVendasResumoParams) (GetVendasResumoRow, error)
 	// Health check query
 	HealthCheck(ctx context.Context) (int32, error)
 	ListAuditoria(ctx context.Context, arg ListAuditoriaParams) ([]Auditorium, error)
+	ListCategoriasCanonicasByEmpresa(ctx context.Context, arg ListCategoriasCanonicasByEmpresaParams) ([]CategoriasCanonica, error)
 	ListEmpresas(ctx context.Context, arg ListEmpresasParams) ([]Empresa, error)
+	ListEventosIngestao(ctx context.Context, arg ListEventosIngestaoParams) ([]EventosIngestao, error)
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
 	ListPapeisByEmpresa(ctx context.Context, arg ListPapeisByEmpresaParams) ([]Papei, error)
+	ListPdvsOrigemByEmpresa(ctx context.Context, arg ListPdvsOrigemByEmpresaParams) ([]PdvsOrigem, error)
+	ListPedidoItensByPedido(ctx context.Context, pedidoID uuid.UUID) ([]PedidoItensCanonico, error)
+	ListPedidoPagamentosByPedido(ctx context.Context, pedidoID uuid.UUID) ([]PedidoPagamentosCanonico, error)
+	ListPedidosCanonicos(ctx context.Context, arg ListPedidosCanonicosParams) ([]PedidosCanonico, error)
 	ListPermissoes(ctx context.Context, arg ListPermissoesParams) ([]Permisso, error)
 	ListPermissoesByPapel(ctx context.Context, papelID uuid.UUID) ([]Permisso, error)
 	ListPermissoesByUsuario(ctx context.Context, arg ListPermissoesByUsuarioParams) ([]Permisso, error)
+	ListProdutosCanonicosByEmpresa(ctx context.Context, arg ListProdutosCanonicosByEmpresaParams) ([]ProdutosCanonico, error)
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
+	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
 	UpdateEmpresa(ctx context.Context, arg UpdateEmpresaParams) (Empresa, error)
+	UpdateEventoIngestao(ctx context.Context, arg UpdateEventoIngestaoParams) (EventosIngestao, error)
 	UpdateLoja(ctx context.Context, arg UpdateLojaParams) (Loja, error)
 	UpdatePapel(ctx context.Context, arg UpdatePapelParams) (Papei, error)
+	UpdatePdvOrigem(ctx context.Context, arg UpdatePdvOrigemParams) (PdvsOrigem, error)
+	UpdatePedidoCanonico(ctx context.Context, arg UpdatePedidoCanonicoParams) (PedidosCanonico, error)
+	UpdatePedidoItemCanonico(ctx context.Context, arg UpdatePedidoItemCanonicoParams) (PedidoItensCanonico, error)
+	UpdatePedidoPagamentoCanonico(ctx context.Context, arg UpdatePedidoPagamentoCanonicoParams) (PedidoPagamentosCanonico, error)
+	UpdateProdutoCanonico(ctx context.Context, arg UpdateProdutoCanonicoParams) (ProdutosCanonico, error)
 	UpdateUsuario(ctx context.Context, arg UpdateUsuarioParams) (Usuario, error)
 	UpdateUsuarioSenha(ctx context.Context, arg UpdateUsuarioSenhaParams) error
 	UpdateUsuarioUltimoLogin(ctx context.Context, id uuid.UUID) error

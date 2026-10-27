@@ -79,3 +79,70 @@ type AuditoriaRepository interface {
 	Create(ctx context.Context, a *Auditoria) error
 	List(ctx context.Context, filter AuditoriaFilter) ([]*Auditoria, error)
 }
+
+// Sales domain repositories
+type PdvOrigemRepository interface {
+	Create(ctx context.Context, p *PdvOrigem) error
+	GetByID(ctx context.Context, id uuid.UUID) (*PdvOrigem, error)
+	GetByCodigo(ctx context.Context, empresaID uuid.UUID, codigo string) (*PdvOrigem, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*PdvOrigem, error)
+	Update(ctx context.Context, p *PdvOrigem) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type CategoriaCanonicaRepository interface {
+	Create(ctx context.Context, c *CategoriaCanonica) error
+	GetByID(ctx context.Context, id uuid.UUID) (*CategoriaCanonica, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*CategoriaCanonica, error)
+	Update(ctx context.Context, c *CategoriaCanonica) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type ProdutoCanonicoRepository interface {
+	Create(ctx context.Context, p *ProdutoCanonico) error
+	GetByID(ctx context.Context, id uuid.UUID) (*ProdutoCanonico, error)
+	GetBySKU(ctx context.Context, empresaID uuid.UUID, sku string) (*ProdutoCanonico, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*ProdutoCanonico, error)
+	Update(ctx context.Context, p *ProdutoCanonico) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type PedidoCanonicoRepository interface {
+	Create(ctx context.Context, p *PedidoCanonico) error
+	GetByID(ctx context.Context, id uuid.UUID) (*PedidoCanonico, error)
+	GetByIdempotencyKey(ctx context.Context, empresaID uuid.UUID, idempotencyKey string) (*PedidoCanonico, error)
+	List(ctx context.Context, filter PedidoCanonicoFilter) ([]*PedidoCanonico, error)
+	Update(ctx context.Context, p *PedidoCanonico) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type PedidoItemCanonicoRepository interface {
+	Create(ctx context.Context, i *PedidoItemCanonico) error
+	GetByID(ctx context.Context, id uuid.UUID) (*PedidoItemCanonico, error)
+	ListByPedido(ctx context.Context, pedidoID uuid.UUID) ([]*PedidoItemCanonico, error)
+	Update(ctx context.Context, i *PedidoItemCanonico) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByPedido(ctx context.Context, pedidoID uuid.UUID) error
+}
+
+type PedidoPagamentoCanonicoRepository interface {
+	Create(ctx context.Context, p *PedidoPagamentoCanonico) error
+	GetByID(ctx context.Context, id uuid.UUID) (*PedidoPagamentoCanonico, error)
+	ListByPedido(ctx context.Context, pedidoID uuid.UUID) ([]*PedidoPagamentoCanonico, error)
+	Update(ctx context.Context, p *PedidoPagamentoCanonico) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByPedido(ctx context.Context, pedidoID uuid.UUID) error
+}
+
+type EventoIngestaoRepository interface {
+	Create(ctx context.Context, e *EventoIngestao) error
+	GetByID(ctx context.Context, id uuid.UUID) (*EventoIngestao, error)
+	GetByIdempotencyKey(ctx context.Context, empresaID uuid.UUID, idempotencyKey string) (*EventoIngestao, error)
+	List(ctx context.Context, filter EventoIngestaoFilter) ([]*EventoIngestao, error)
+	Update(ctx context.Context, e *EventoIngestao) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type VendasResumoRepository interface {
+	GetResumo(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim *time.Time) (*VendasResumo, error)
+}

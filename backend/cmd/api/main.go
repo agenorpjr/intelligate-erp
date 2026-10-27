@@ -50,14 +50,34 @@ func main() {
 	lojaRepo := db.NewLojaRepository(dbpool)
 	usuarioRepo := db.NewUsuarioRepository(dbpool)
 	auditoriaRepo := db.NewAuditoriaRepository(dbpool)
+	pdvOrigemRepo := db.NewPdvOrigemRepository(dbpool)
+	produtoCanonicoRepo := db.NewProdutoCanonicoRepository(dbpool)
+	pedidoCanonicoRepo := db.NewPedidoCanonicoRepository(dbpool)
+	pedidoItemCanonicoRepo := db.NewPedidoItemCanonicoRepository(dbpool)
+	pedidoPagamentoCanonicoRepo := db.NewPedidoPagamentoCanonicoRepository(dbpool)
+	eventoIngestaoRepo := db.NewEventoIngestaoRepository(dbpool)
+	vendasResumoRepo := db.NewVendasResumoRepository(dbpool)
+	salesTxRepo := db.NewSalesTxRepository(dbpool)
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	lojaUsecase := usecase.NewLojaUsecase(lojaRepo, empresaRepo, auditoriaRepo)
+	salesUsecase := usecase.NewSalesUsecase(
+		pdvOrigemRepo,
+		produtoCanonicoRepo,
+		pedidoCanonicoRepo,
+		pedidoItemCanonicoRepo,
+		pedidoPagamentoCanonicoRepo,
+		eventoIngestaoRepo,
+		lojaRepo,
+		vendasResumoRepo,
+		salesTxRepo,
+	)
 
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
+	salesHandler := httpadapter.NewSalesHandler(salesUsecase)
 	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
 
 	// Create router
@@ -89,6 +109,11 @@ func main() {
 			r.Get("/lojas/{id}", lojaHandler.BuscarPorID)
 			r.Put("/lojas/{id}", lojaHandler.Atualizar)
 			r.Delete("/lojas/{id}", lojaHandler.Deletar)
+
+			// Vendas / Ingestão
+			r.Post("/ingest/sales-event", salesHandler.IngestSalesEvent)
+			r.Get("/vendas/resumo", salesHandler.GetVendasResumo)
+			r.Get("/vendas", salesHandler.ListPedidos)
 		})
 	})
 

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,19 @@ type Auditorium struct {
 	CreatedAt  time.Time   `json:"created_at"`
 }
 
+type CategoriasCanonica struct {
+	ID        uuid.UUID          `json:"id"`
+	EmpresaID uuid.UUID          `json:"empresa_id"`
+	Nome      string             `json:"nome"`
+	Descricao pgtype.Text        `json:"descricao"`
+	Cor       pgtype.Text        `json:"cor"`
+	Icone     pgtype.Text        `json:"icone"`
+	Ativo     bool               `json:"ativo"`
+	CreatedAt time.Time          `json:"created_at"`
+	UpdatedAt time.Time          `json:"updated_at"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type Empresa struct {
 	ID           uuid.UUID          `json:"id"`
 	Cnpj         string             `json:"cnpj"`
@@ -34,6 +48,23 @@ type Empresa struct {
 	CreatedAt    time.Time          `json:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type EventosIngestao struct {
+	ID              uuid.UUID          `json:"id"`
+	EmpresaID       uuid.UUID          `json:"empresa_id"`
+	LojaID          uuid.UUID          `json:"loja_id"`
+	PdvOrigemID     uuid.UUID          `json:"pdv_origem_id"`
+	TipoEvento      string             `json:"tipo_evento"`
+	PayloadOriginal json.RawMessage    `json:"payload_original"`
+	Status          string             `json:"status"`
+	Erro            pgtype.Text        `json:"erro"`
+	Tentativas      int32              `json:"tentativas"`
+	IdempotencyKey  string             `json:"idempotency_key"`
+	ProcessadoEm    pgtype.Timestamptz `json:"processado_em"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type Loja struct {
@@ -66,11 +97,94 @@ type PapeisPermisso struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type PdvsOrigem struct {
+	ID           uuid.UUID          `json:"id"`
+	EmpresaID    uuid.UUID          `json:"empresa_id"`
+	Nome         string             `json:"nome"`
+	Codigo       string             `json:"codigo"`
+	Tipo         string             `json:"tipo"`
+	Configuracao []byte             `json:"configuracao"`
+	Ativo        bool               `json:"ativo"`
+	CreatedAt    time.Time          `json:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type PedidoItensCanonico struct {
+	ID                uuid.UUID          `json:"id"`
+	PedidoID          uuid.UUID          `json:"pedido_id"`
+	ProdutoCanonicoID pgtype.UUID        `json:"produto_canonico_id"`
+	SkuExterno        pgtype.Text        `json:"sku_externo"`
+	Nome              string             `json:"nome"`
+	Quantidade        pgtype.Numeric     `json:"quantidade"`
+	PrecoUnitario     pgtype.Numeric     `json:"preco_unitario"`
+	ValorTotal        pgtype.Numeric     `json:"valor_total"`
+	Desconto          pgtype.Numeric     `json:"desconto"`
+	Modificadores     []byte             `json:"modificadores"`
+	Observacoes       pgtype.Text        `json:"observacoes"`
+	CreatedAt         time.Time          `json:"created_at"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type PedidoPagamentosCanonico struct {
+	ID                uuid.UUID          `json:"id"`
+	PedidoID          uuid.UUID          `json:"pedido_id"`
+	FormaPagamento    string             `json:"forma_pagamento"`
+	Valor             pgtype.Numeric     `json:"valor"`
+	Taxa              pgtype.Numeric     `json:"taxa"`
+	Troco             pgtype.Numeric     `json:"troco"`
+	ReferenciaExterna pgtype.Text        `json:"referencia_externa"`
+	Status            string             `json:"status"`
+	CreatedAt         time.Time          `json:"created_at"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type PedidosCanonico struct {
+	ID               uuid.UUID          `json:"id"`
+	EmpresaID        uuid.UUID          `json:"empresa_id"`
+	LojaID           uuid.UUID          `json:"loja_id"`
+	PdvOrigemID      uuid.UUID          `json:"pdv_origem_id"`
+	NumeroExterno    string             `json:"numero_externo"`
+	DataHora         time.Time          `json:"data_hora"`
+	Status           string             `json:"status"`
+	ValorTotal       pgtype.Numeric     `json:"valor_total"`
+	ValorDesconto    pgtype.Numeric     `json:"valor_desconto"`
+	ValorAcrescimo   pgtype.Numeric     `json:"valor_acrescimo"`
+	IdempotencyKey   string             `json:"idempotency_key"`
+	ClienteNome      pgtype.Text        `json:"cliente_nome"`
+	ClienteDocumento pgtype.Text        `json:"cliente_documento"`
+	ClienteEmail     pgtype.Text        `json:"cliente_email"`
+	Observacoes      pgtype.Text        `json:"observacoes"`
+	CreatedAt        time.Time          `json:"created_at"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type Permisso struct {
 	ID        uuid.UUID   `json:"id"`
 	Chave     string      `json:"chave"`
 	Descricao pgtype.Text `json:"descricao"`
 	CreatedAt time.Time   `json:"created_at"`
+}
+
+type ProdutosCanonico struct {
+	ID          uuid.UUID          `json:"id"`
+	EmpresaID   uuid.UUID          `json:"empresa_id"`
+	CategoriaID pgtype.UUID        `json:"categoria_id"`
+	Sku         string             `json:"sku"`
+	Nome        string             `json:"nome"`
+	Descricao   pgtype.Text        `json:"descricao"`
+	Unidade     string             `json:"unidade"`
+	PrecoBase   pgtype.Numeric     `json:"preco_base"`
+	Ncm         pgtype.Text        `json:"ncm"`
+	Cest        pgtype.Text        `json:"cest"`
+	Tributacao  pgtype.Text        `json:"tributacao"`
+	Ativo       bool               `json:"ativo"`
+	CreatedAt   time.Time          `json:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type Usuario struct {
