@@ -28,6 +28,8 @@ type Querier interface {
 	CreateLoja(ctx context.Context, arg CreateLojaParams) (Loja, error)
 	CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei, error)
 	CreatePapelPermissao(ctx context.Context, arg CreatePapelPermissaoParams) error
+	// PDV Integração
+	CreatePdvIntegracao(ctx context.Context, arg CreatePdvIntegracaoParams) (PdvIntegraco, error)
 	// PDV Origem
 	CreatePdvOrigem(ctx context.Context, arg CreatePdvOrigemParams) (PdvsOrigem, error)
 	// Pedido Canônico
@@ -53,6 +55,7 @@ type Querier interface {
 	DeleteLoja(ctx context.Context, id uuid.UUID) error
 	DeletePapel(ctx context.Context, id uuid.UUID) error
 	DeletePapelPermissao(ctx context.Context, arg DeletePapelPermissaoParams) error
+	DeletePdvIntegracao(ctx context.Context, id uuid.UUID) error
 	DeletePdvOrigem(ctx context.Context, id uuid.UUID) error
 	DeletePedidoCanonico(ctx context.Context, id uuid.UUID) error
 	DeletePedidoItemCanonico(ctx context.Context, id uuid.UUID) error
@@ -83,6 +86,8 @@ type Querier interface {
 	GetInsumoCustoVigente(ctx context.Context, arg GetInsumoCustoVigenteParams) (InsumoCusto, error)
 	GetLoja(ctx context.Context, id uuid.UUID) (Loja, error)
 	GetPapel(ctx context.Context, id uuid.UUID) (Papei, error)
+	GetPdvIntegracao(ctx context.Context, id uuid.UUID) (PdvIntegraco, error)
+	GetPdvIntegracaoByLojaProvedor(ctx context.Context, arg GetPdvIntegracaoByLojaProvedorParams) (PdvIntegraco, error)
 	GetPdvOrigem(ctx context.Context, id uuid.UUID) (PdvsOrigem, error)
 	GetPdvOrigemByCodigo(ctx context.Context, arg GetPdvOrigemByCodigoParams) (PdvsOrigem, error)
 	GetPedidoCanonico(ctx context.Context, id uuid.UUID) (PedidosCanonico, error)
@@ -116,6 +121,7 @@ type Querier interface {
 	ListInsumosByEmpresa(ctx context.Context, arg ListInsumosByEmpresaParams) ([]Insumo, error)
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
 	ListPapeisByEmpresa(ctx context.Context, arg ListPapeisByEmpresaParams) ([]Papei, error)
+	ListPdvIntegracoesByEmpresa(ctx context.Context, arg ListPdvIntegracoesByEmpresaParams) ([]PdvIntegraco, error)
 	ListPdvsOrigemByEmpresa(ctx context.Context, arg ListPdvsOrigemByEmpresaParams) ([]PdvsOrigem, error)
 	ListPedidoItensByPedido(ctx context.Context, pedidoID uuid.UUID) ([]PedidoItensCanonico, error)
 	ListPedidoPagamentosByPedido(ctx context.Context, pedidoID uuid.UUID) ([]PedidoPagamentosCanonico, error)
@@ -135,6 +141,8 @@ type Querier interface {
 	UpdateInsumo(ctx context.Context, arg UpdateInsumoParams) (Insumo, error)
 	UpdateLoja(ctx context.Context, arg UpdateLojaParams) (Loja, error)
 	UpdatePapel(ctx context.Context, arg UpdatePapelParams) (Papei, error)
+	UpdatePdvIntegracao(ctx context.Context, arg UpdatePdvIntegracaoParams) (PdvIntegraco, error)
+	UpdatePdvIntegracaoUltimaSincronizacao(ctx context.Context, arg UpdatePdvIntegracaoUltimaSincronizacaoParams) (PdvIntegraco, error)
 	UpdatePdvOrigem(ctx context.Context, arg UpdatePdvOrigemParams) (PdvsOrigem, error)
 	UpdatePedidoCanonico(ctx context.Context, arg UpdatePedidoCanonicoParams) (PedidosCanonico, error)
 	UpdatePedidoItemCanonico(ctx context.Context, arg UpdatePedidoItemCanonicoParams) (PedidoItensCanonico, error)

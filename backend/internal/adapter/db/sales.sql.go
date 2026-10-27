@@ -104,6 +104,55 @@ func (q *Queries) CreateEventoIngestao(ctx context.Context, arg CreateEventoInge
 	return i, err
 }
 
+const createPdvIntegracao = `-- name: CreatePdvIntegracao :one
+INSERT INTO pdv_integracoes (empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at
+`
+
+type CreatePdvIntegracaoParams struct {
+	EmpresaID             uuid.UUID   `json:"empresa_id"`
+	LojaID                uuid.UUID   `json:"loja_id"`
+	Provedor              string      `json:"provedor"`
+	Ambiente              string      `json:"ambiente"`
+	UrlBase               string      `json:"url_base"`
+	ApiKeyEncrypted       string      `json:"api_key_encrypted"`
+	ClientID              pgtype.Text `json:"client_id"`
+	ClientSecretEncrypted pgtype.Text `json:"client_secret_encrypted"`
+}
+
+// PDV Integração
+func (q *Queries) CreatePdvIntegracao(ctx context.Context, arg CreatePdvIntegracaoParams) (PdvIntegraco, error) {
+	row := q.db.QueryRow(ctx, createPdvIntegracao,
+		arg.EmpresaID,
+		arg.LojaID,
+		arg.Provedor,
+		arg.Ambiente,
+		arg.UrlBase,
+		arg.ApiKeyEncrypted,
+		arg.ClientID,
+		arg.ClientSecretEncrypted,
+	)
+	var i PdvIntegraco
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.LojaID,
+		&i.Provedor,
+		&i.Ambiente,
+		&i.UrlBase,
+		&i.ApiKeyEncrypted,
+		&i.ClientID,
+		&i.ClientSecretEncrypted,
+		&i.Ativo,
+		&i.UltimaSincronizacao,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const createPdvOrigem = `-- name: CreatePdvOrigem :one
 INSERT INTO pdvs_origem (empresa_id, nome, codigo, tipo, configuracao)
 VALUES ($1, $2, $3, $4, $5)
@@ -377,6 +426,15 @@ func (q *Queries) DeleteEventoIngestao(ctx context.Context, id uuid.UUID) error 
 	return err
 }
 
+const deletePdvIntegracao = `-- name: DeletePdvIntegracao :exec
+UPDATE pdv_integracoes SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1
+`
+
+func (q *Queries) DeletePdvIntegracao(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deletePdvIntegracao, id)
+	return err
+}
+
 const deletePdvOrigem = `-- name: DeletePdvOrigem :exec
 UPDATE pdvs_origem SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1
 `
@@ -512,6 +570,63 @@ func (q *Queries) GetEventoIngestaoByIdempotencyKey(ctx context.Context, arg Get
 		&i.Tentativas,
 		&i.IdempotencyKey,
 		&i.ProcessadoEm,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getPdvIntegracao = `-- name: GetPdvIntegracao :one
+SELECT id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at FROM pdv_integracoes WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetPdvIntegracao(ctx context.Context, id uuid.UUID) (PdvIntegraco, error) {
+	row := q.db.QueryRow(ctx, getPdvIntegracao, id)
+	var i PdvIntegraco
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.LojaID,
+		&i.Provedor,
+		&i.Ambiente,
+		&i.UrlBase,
+		&i.ApiKeyEncrypted,
+		&i.ClientID,
+		&i.ClientSecretEncrypted,
+		&i.Ativo,
+		&i.UltimaSincronizacao,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getPdvIntegracaoByLojaProvedor = `-- name: GetPdvIntegracaoByLojaProvedor :one
+SELECT id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at FROM pdv_integracoes WHERE loja_id = $1 AND provedor = $2 AND deleted_at IS NULL
+`
+
+type GetPdvIntegracaoByLojaProvedorParams struct {
+	LojaID   uuid.UUID `json:"loja_id"`
+	Provedor string    `json:"provedor"`
+}
+
+func (q *Queries) GetPdvIntegracaoByLojaProvedor(ctx context.Context, arg GetPdvIntegracaoByLojaProvedorParams) (PdvIntegraco, error) {
+	row := q.db.QueryRow(ctx, getPdvIntegracaoByLojaProvedor, arg.LojaID, arg.Provedor)
+	var i PdvIntegraco
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.LojaID,
+		&i.Provedor,
+		&i.Ambiente,
+		&i.UrlBase,
+		&i.ApiKeyEncrypted,
+		&i.ClientID,
+		&i.ClientSecretEncrypted,
+		&i.Ativo,
+		&i.UltimaSincronizacao,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -893,6 +1008,64 @@ func (q *Queries) ListEventosIngestao(ctx context.Context, arg ListEventosIngest
 	return items, nil
 }
 
+const listPdvIntegracoesByEmpresa = `-- name: ListPdvIntegracoesByEmpresa :many
+SELECT id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at FROM pdv_integracoes
+WHERE empresa_id = $1
+  AND deleted_at IS NULL
+  AND ($2::text IS NULL OR provedor = $2)
+  AND ($3::boolean IS NULL OR ativo = $3)
+ORDER BY created_at DESC LIMIT $4 OFFSET $5
+`
+
+type ListPdvIntegracoesByEmpresaParams struct {
+	EmpresaID uuid.UUID `json:"empresa_id"`
+	Column2   string    `json:"column_2"`
+	Column3   bool      `json:"column_3"`
+	Limit     int32     `json:"limit"`
+	Offset    int32     `json:"offset"`
+}
+
+func (q *Queries) ListPdvIntegracoesByEmpresa(ctx context.Context, arg ListPdvIntegracoesByEmpresaParams) ([]PdvIntegraco, error) {
+	rows, err := q.db.Query(ctx, listPdvIntegracoesByEmpresa,
+		arg.EmpresaID,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PdvIntegraco{}
+	for rows.Next() {
+		var i PdvIntegraco
+		if err := rows.Scan(
+			&i.ID,
+			&i.EmpresaID,
+			&i.LojaID,
+			&i.Provedor,
+			&i.Ambiente,
+			&i.UrlBase,
+			&i.ApiKeyEncrypted,
+			&i.ClientID,
+			&i.ClientSecretEncrypted,
+			&i.Ativo,
+			&i.UltimaSincronizacao,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPdvsOrigemByEmpresa = `-- name: ListPdvsOrigemByEmpresa :many
 SELECT id, empresa_id, nome, codigo, tipo, configuracao, ativo, created_at, updated_at, deleted_at FROM pdvs_origem WHERE empresa_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
@@ -1200,6 +1373,89 @@ func (q *Queries) UpdateEventoIngestao(ctx context.Context, arg UpdateEventoInge
 		&i.Tentativas,
 		&i.IdempotencyKey,
 		&i.ProcessadoEm,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updatePdvIntegracao = `-- name: UpdatePdvIntegracao :one
+UPDATE pdv_integracoes
+SET provedor = $2, ambiente = $3, url_base = $4, api_key_encrypted = $5, client_id = $6, client_secret_encrypted = $7, ativo = $8, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at
+`
+
+type UpdatePdvIntegracaoParams struct {
+	ID                    uuid.UUID   `json:"id"`
+	Provedor              string      `json:"provedor"`
+	Ambiente              string      `json:"ambiente"`
+	UrlBase               string      `json:"url_base"`
+	ApiKeyEncrypted       string      `json:"api_key_encrypted"`
+	ClientID              pgtype.Text `json:"client_id"`
+	ClientSecretEncrypted pgtype.Text `json:"client_secret_encrypted"`
+	Ativo                 bool        `json:"ativo"`
+}
+
+func (q *Queries) UpdatePdvIntegracao(ctx context.Context, arg UpdatePdvIntegracaoParams) (PdvIntegraco, error) {
+	row := q.db.QueryRow(ctx, updatePdvIntegracao,
+		arg.ID,
+		arg.Provedor,
+		arg.Ambiente,
+		arg.UrlBase,
+		arg.ApiKeyEncrypted,
+		arg.ClientID,
+		arg.ClientSecretEncrypted,
+		arg.Ativo,
+	)
+	var i PdvIntegraco
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.LojaID,
+		&i.Provedor,
+		&i.Ambiente,
+		&i.UrlBase,
+		&i.ApiKeyEncrypted,
+		&i.ClientID,
+		&i.ClientSecretEncrypted,
+		&i.Ativo,
+		&i.UltimaSincronizacao,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updatePdvIntegracaoUltimaSincronizacao = `-- name: UpdatePdvIntegracaoUltimaSincronizacao :one
+UPDATE pdv_integracoes
+SET ultima_sincronizacao = $2, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted, ativo, ultima_sincronizacao, created_at, updated_at, deleted_at
+`
+
+type UpdatePdvIntegracaoUltimaSincronizacaoParams struct {
+	ID                  uuid.UUID          `json:"id"`
+	UltimaSincronizacao pgtype.Timestamptz `json:"ultima_sincronizacao"`
+}
+
+func (q *Queries) UpdatePdvIntegracaoUltimaSincronizacao(ctx context.Context, arg UpdatePdvIntegracaoUltimaSincronizacaoParams) (PdvIntegraco, error) {
+	row := q.db.QueryRow(ctx, updatePdvIntegracaoUltimaSincronizacao, arg.ID, arg.UltimaSincronizacao)
+	var i PdvIntegraco
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.LojaID,
+		&i.Provedor,
+		&i.Ambiente,
+		&i.UrlBase,
+		&i.ApiKeyEncrypted,
+		&i.ClientID,
+		&i.ClientSecretEncrypted,
+		&i.Ativo,
+		&i.UltimaSincronizacao,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

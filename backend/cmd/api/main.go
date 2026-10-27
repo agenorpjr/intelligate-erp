@@ -51,6 +51,7 @@ func main() {
 	usuarioRepo := db.NewUsuarioRepository(dbpool)
 	auditoriaRepo := db.NewAuditoriaRepository(dbpool)
 	pdvOrigemRepo := db.NewPdvOrigemRepository(dbpool)
+	pdvIntegracaoRepo := db.NewPdvIntegracaoRepository(dbpool)
 	produtoCanonicoRepo := db.NewProdutoCanonicoRepository(dbpool)
 	pedidoCanonicoRepo := db.NewPedidoCanonicoRepository(dbpool)
 	pedidoItemCanonicoRepo := db.NewPedidoItemCanonicoRepository(dbpool)
@@ -76,6 +77,13 @@ func main() {
 		vendasResumoRepo,
 		salesTxRepo,
 	)
+	pdvIntegracaoUsecase := usecase.NewPdvIntegracaoUsecase(
+		pdvIntegracaoRepo,
+		lojaRepo,
+		pdvOrigemRepo,
+		salesUsecase,
+		auditoriaRepo,
+	)
 	insumoUsecase := usecase.NewInsumoUsecase(insumoRepo, auditoriaRepo)
 	produtoUsecase := usecase.NewProdutoUsecase(produtoRepo, auditoriaRepo)
 	fichaTecnicaUsecase := usecase.NewFichaTecnicaUsecase(
@@ -94,6 +102,7 @@ func main() {
 	produtoHandler := httpadapter.NewProdutoHandler(produtoUsecase)
 	fichaTecnicaHandler := httpadapter.NewFichaTecnicaHandler(fichaTecnicaUsecase)
 	cmvHandler := httpadapter.NewCMVHandler(fichaTecnicaUsecase)
+	pdvIntegracaoHandler := httpadapter.NewPdvIntegracaoHandler(pdvIntegracaoUsecase)
 	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
 
 	// Create router
@@ -161,6 +170,14 @@ func main() {
 			r.Post("/ingest/sales-event", salesHandler.IngestSalesEvent)
 			r.Get("/vendas/resumo", salesHandler.GetVendasResumo)
 			r.Get("/vendas", salesHandler.ListPedidos)
+
+			// Integrações PDV
+			r.Post("/integracoes", pdvIntegracaoHandler.Criar)
+			r.Get("/integracoes", pdvIntegracaoHandler.Listar)
+			r.Get("/integracoes/{id}", pdvIntegracaoHandler.BuscarPorID)
+			r.Put("/integracoes/{id}", pdvIntegracaoHandler.Atualizar)
+			r.Delete("/integracoes/{id}", pdvIntegracaoHandler.Deletar)
+			r.Post("/integracoes/{id}/sincronizar", pdvIntegracaoHandler.Sincronizar)
 		})
 	})
 

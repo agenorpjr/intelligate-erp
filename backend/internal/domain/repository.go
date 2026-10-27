@@ -188,3 +188,14 @@ type FichaTecnicaRepository interface {
 	GetCMVProdutosDetalhe(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time, limit, offset int) ([]*CMVProdutoDetalhe, error)
 	GetProdutosSemFichaTecnica(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time, limit, offset int) ([]*CMVProdutoDetalhe, error)
 }
+
+// PDV Integração Repository
+type PdvIntegracaoRepository interface {
+	Create(ctx context.Context, p *PdvIntegracao) error
+	GetByID(ctx context.Context, id uuid.UUID) (*PdvIntegracao, error)
+	GetByLojaProvedor(ctx context.Context, lojaID uuid.UUID, provedor string) (*PdvIntegracao, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, filter PdvIntegracaoFilter) ([]*PdvIntegracao, error)
+	Update(ctx context.Context, p *PdvIntegracao) error
+	UpdateUltimaSincronizacao(ctx context.Context, id uuid.UUID, ultimaSincronizacao time.Time) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}

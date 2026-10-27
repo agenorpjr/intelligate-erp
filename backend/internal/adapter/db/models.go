@@ -141,6 +141,23 @@ type PapeisPermisso struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type PdvIntegraco struct {
+	ID                    uuid.UUID          `json:"id"`
+	EmpresaID             uuid.UUID          `json:"empresa_id"`
+	LojaID                uuid.UUID          `json:"loja_id"`
+	Provedor              string             `json:"provedor"`
+	Ambiente              string             `json:"ambiente"`
+	UrlBase               string             `json:"url_base"`
+	ApiKeyEncrypted       string             `json:"api_key_encrypted"`
+	ClientID              pgtype.Text        `json:"client_id"`
+	ClientSecretEncrypted pgtype.Text        `json:"client_secret_encrypted"`
+	Ativo                 bool               `json:"ativo"`
+	UltimaSincronizacao   pgtype.Timestamptz `json:"ultima_sincronizacao"`
+	CreatedAt             time.Time          `json:"created_at"`
+	UpdatedAt             time.Time          `json:"updated_at"`
+	DeletedAt             pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type PdvsOrigem struct {
 	ID           uuid.UUID          `json:"id"`
 	EmpresaID    uuid.UUID          `json:"empresa_id"`

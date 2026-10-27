@@ -191,3 +191,38 @@ WHERE empresa_id = $1
   AND ($3::timestamptz IS NULL OR data_hora >= $3)
   AND ($4::timestamptz IS NULL OR data_hora <= $4)
   AND status != 'cancelado';
+
+-- PDV Integração
+-- name: CreatePdvIntegracao :one
+INSERT INTO pdv_integracoes (empresa_id, loja_id, provedor, ambiente, url_base, api_key_encrypted, client_id, client_secret_encrypted)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING *;
+
+-- name: GetPdvIntegracao :one
+SELECT * FROM pdv_integracoes WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: GetPdvIntegracaoByLojaProvedor :one
+SELECT * FROM pdv_integracoes WHERE loja_id = $1 AND provedor = $2 AND deleted_at IS NULL;
+
+-- name: ListPdvIntegracoesByEmpresa :many
+SELECT * FROM pdv_integracoes
+WHERE empresa_id = $1
+  AND deleted_at IS NULL
+  AND ($2::text IS NULL OR provedor = $2)
+  AND ($3::boolean IS NULL OR ativo = $3)
+ORDER BY created_at DESC LIMIT $4 OFFSET $5;
+
+-- name: UpdatePdvIntegracao :one
+UPDATE pdv_integracoes
+SET provedor = $2, ambiente = $3, url_base = $4, api_key_encrypted = $5, client_id = $6, client_secret_encrypted = $7, ativo = $8, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING *;
+
+-- name: UpdatePdvIntegracaoUltimaSincronizacao :one
+UPDATE pdv_integracoes
+SET ultima_sincronizacao = $2, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING *;
+
+-- name: DeletePdvIntegracao :exec
+UPDATE pdv_integracoes SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1;
