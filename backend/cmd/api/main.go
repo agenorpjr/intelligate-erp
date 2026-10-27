@@ -14,6 +14,7 @@ import (
 	httpadapter "github.com/intelligate/erp/backend/internal/adapter/http"
 	"github.com/intelligate/erp/backend/internal/config"
 	"github.com/intelligate/erp/backend/internal/usecase"
+	"github.com/intelligate/erp/backend/pkg/crypto"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -63,6 +64,12 @@ func main() {
 	produtoRepo := db.NewProdutoRepository(dbpool)
 	fichaTecnicaRepo := db.NewFichaTecnicaRepository(dbpool)
 
+	// Initialize crypto service
+	cryptoService, err := crypto.NewCryptoServiceFromEnv()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize crypto service: INTELLIGATE_ENCRYPTION_KEY must be set and valid")
+	}
+
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	lojaUsecase := usecase.NewLojaUsecase(lojaRepo, empresaRepo, auditoriaRepo)
@@ -83,6 +90,7 @@ func main() {
 		pdvOrigemRepo,
 		salesUsecase,
 		auditoriaRepo,
+		cryptoService,
 	)
 	insumoUsecase := usecase.NewInsumoUsecase(insumoRepo, auditoriaRepo)
 	produtoUsecase := usecase.NewProdutoUsecase(produtoRepo, auditoriaRepo)

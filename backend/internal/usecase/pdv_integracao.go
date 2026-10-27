@@ -10,11 +10,13 @@ import (
 
 	"github.com/intelligate/erp/backend/internal/adapter/gula"
 	"github.com/intelligate/erp/backend/internal/domain"
+	"github.com/intelligate/erp/backend/pkg/crypto"
 )
 
 var (
 	ErrPdvIntegracaoNaoEncontrada = errors.New("integração PDV não encontrada")
 	ErrPdvIntegracaoJaExiste      = errors.New("integração PDV já existe para esta loja e provedor")
+	ErrCryptoNaoConfigurado       = errors.New("serviço de criptografia não configurado: defina INTELLIGATE_ENCRYPTION_KEY")
 )
 
 type PdvIntegracaoUsecase struct {
@@ -23,6 +25,7 @@ type PdvIntegracaoUsecase struct {
 	pdvOrigemRepo     domain.PdvOrigemRepository
 	salesUsecase      *SalesUsecase
 	auditoriaRepo     domain.AuditoriaRepository
+	cryptoService     *crypto.CryptoService
 }
 
 func NewPdvIntegracaoUsecase(
@@ -31,6 +34,7 @@ func NewPdvIntegracaoUsecase(
 	pdvOrigemRepo domain.PdvOrigemRepository,
 	salesUsecase *SalesUsecase,
 	auditoriaRepo domain.AuditoriaRepository,
+	cryptoService *crypto.CryptoService,
 ) *PdvIntegracaoUsecase {
 	return &PdvIntegracaoUsecase{
 		pdvIntegracaoRepo: pdvIntegracaoRepo,
@@ -38,6 +42,7 @@ func NewPdvIntegracaoUsecase(
 		pdvOrigemRepo:     pdvOrigemRepo,
 		salesUsecase:      salesUsecase,
 		auditoriaRepo:     auditoriaRepo,
+		cryptoService:     cryptoService,
 	}
 }
 
@@ -57,8 +62,22 @@ func (uc *PdvIntegracaoUsecase) Criar(ctx context.Context, input domain.CreatePd
 		return nil, ErrPdvIntegracaoJaExiste
 	}
 
-	// TODO: Criptografar API Key e Client Secret antes de salvar
-	// Por enquanto, armazenamos como está (em produção usar criptografia)
+	// Verificar se criptografia está configurada
+	if uc.cryptoService == nil {
+		return nil, ErrCryptoNaoConfigurado
+	}
+
+	// Criptografar credenciais
+	apiKeyEncrypted, err := uc.cryptoService.Encrypt(input.APIKey)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao criptografar API Key: %w", err)
+	}
+
+	clientSecretEncrypted, err := uc.cryptoService.Encrypt(input.ClientSecret)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao criptografar Client Secret: %w", err)
+	}
+
 	integracao := &domain.PdvIntegracao{
 		ID:                    uuid.New(),
 		EmpresaID:             input.EmpresaID,
@@ -66,9 +85,9 @@ func (uc *PdvIntegracaoUsecase) Criar(ctx context.Context, input domain.CreatePd
 		Provedor:              input.Provedor,
 		Ambiente:              input.Ambiente,
 		URLBase:               input.URLBase,
-		APIKeyEncrypted:       input.APIKey, // TODO: encrypt
+		APIKeyEncrypted:       apiKeyEncrypted,
 		ClientID:              input.ClientID,
-		ClientSecretEncrypted: input.ClientSecret, // TODO: encrypt
+		ClientSecretEncrypted: clientSecretEncrypted,
 		Ativo:                 true,
 	}
 
@@ -76,7 +95,7 @@ func (uc *PdvIntegracaoUsecase) Criar(ctx context.Context, input domain.CreatePd
 		return nil, err
 	}
 
-	// Auditoria
+	// Auditoria (sem credenciais sensíveis)
 	uc.auditoriaRepo.Create(ctx, &domain.Auditoria{
 		EmpresaID:  &input.EmpresaID,
 		UsuarioID:  &usuarioID,
@@ -136,13 +155,27 @@ func (uc *PdvIntegracaoUsecase) Atualizar(ctx context.Context, id uuid.UUID, inp
 		integracao.URLBase = *input.URLBase
 	}
 	if input.APIKey != nil {
-		integracao.APIKeyEncrypted = *input.APIKey // TODO: encrypt
+		if uc.cryptoService == nil {
+			return nil, ErrCryptoNaoConfigurado
+		}
+		apiKeyEncrypted, err := uc.cryptoService.Encrypt(*input.APIKey)
+		if err != nil {
+			return nil, fmt.Errorf("falha ao criptografar API Key: %w", err)
+		}
+		integracao.APIKeyEncrypted = apiKeyEncrypted
 	}
 	if input.ClientID != nil {
 		integracao.ClientID = *input.ClientID
 	}
 	if input.ClientSecret != nil {
-		integracao.ClientSecretEncrypted = *input.ClientSecret // TODO: encrypt
+		if uc.cryptoService == nil {
+			return nil, ErrCryptoNaoConfigurado
+		}
+		clientSecretEncrypted, err := uc.cryptoService.Encrypt(*input.ClientSecret)
+		if err != nil {
+			return nil, fmt.Errorf("falha ao criptografar Client Secret: %w", err)
+		}
+		integracao.ClientSecretEncrypted = clientSecretEncrypted
 	}
 	if input.Ativo != nil {
 		integracao.Ativo = *input.Ativo
@@ -152,7 +185,7 @@ func (uc *PdvIntegracaoUsecase) Atualizar(ctx context.Context, id uuid.UUID, inp
 		return nil, err
 	}
 
-	// Auditoria
+	// Auditoria (sem credenciais sensíveis)
 	uc.auditoriaRepo.Create(ctx, &domain.Auditoria{
 		EmpresaID:  &integracao.EmpresaID,
 		UsuarioID:  &usuarioID,
@@ -212,18 +245,34 @@ func (uc *PdvIntegracaoUsecase) SincronizarVendas(ctx context.Context, integraca
 		return nil, errors.New("integração não está ativa")
 	}
 
+	// Verificar se criptografia está configurada
+	if uc.cryptoService == nil {
+		return nil, ErrCryptoNaoConfigurado
+	}
+
+	// Descriptografar credenciais
+	apiKey, err := uc.cryptoService.Decrypt(integracao.APIKeyEncrypted)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao descriptografar API Key: %w", err)
+	}
+
+	clientSecret, err := uc.cryptoService.Decrypt(integracao.ClientSecretEncrypted)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao descriptografar Client Secret: %w", err)
+	}
+
 	// Buscar PDV de origem associado à loja
 	pdvOrigem, err := uc.pdvOrigemRepo.GetByCodigo(ctx, integracao.EmpresaID, integracao.Provedor)
 	if err != nil || pdvOrigem == nil {
 		return nil, ErrPdvOrigemNaoEncontrado
 	}
 
-	// Criar cliente Gula
+	// Criar cliente Gula com credenciais descriptografadas
 	gulaClient := gula.NewGulaClient(gula.ConfigGula{
 		URLBase:      integracao.URLBase,
-		APIKey:       integracao.APIKeyEncrypted, // TODO: decrypt in production
+		APIKey:       apiKey,
 		ClientID:     integracao.ClientID,
-		ClientSecret: integracao.ClientSecretEncrypted, // TODO: decrypt in production
+		ClientSecret: clientSecret,
 		Ambiente:     integracao.Ambiente,
 		Timeout:      30 * time.Second,
 	})
