@@ -67,6 +67,50 @@ type EventosIngestao struct {
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type FichaTecnicaComponente struct {
+	ID             uuid.UUID      `json:"id"`
+	FichaTecnicaID uuid.UUID      `json:"ficha_tecnica_id"`
+	InsumoID       uuid.UUID      `json:"insumo_id"`
+	Quantidade     pgtype.Numeric `json:"quantidade"`
+	UnidadeMedida  string         `json:"unidade_medida"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type FichasTecnica struct {
+	ID                uuid.UUID          `json:"id"`
+	ProdutoID         uuid.UUID          `json:"produto_id"`
+	LojaID            uuid.UUID          `json:"loja_id"`
+	Rendimento        pgtype.Numeric     `json:"rendimento"`
+	UnidadeRendimento string             `json:"unidade_rendimento"`
+	Ativo             bool               `json:"ativo"`
+	CreatedAt         time.Time          `json:"created_at"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type Insumo struct {
+	ID                 uuid.UUID          `json:"id"`
+	EmpresaID          uuid.UUID          `json:"empresa_id"`
+	Nome               string             `json:"nome"`
+	UnidadeMedida      string             `json:"unidade_medida"`
+	CustoUnitarioAtual pgtype.Numeric     `json:"custo_unitario_atual"`
+	Fornecedor         pgtype.Text        `json:"fornecedor"`
+	Ativo              bool               `json:"ativo"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type InsumoCusto struct {
+	ID            uuid.UUID      `json:"id"`
+	InsumoID      uuid.UUID      `json:"insumo_id"`
+	DataVigencia  time.Time      `json:"data_vigencia"`
+	CustoUnitario pgtype.Numeric `json:"custo_unitario"`
+	Observacao    pgtype.Text    `json:"observacao"`
+	CreatedAt     time.Time      `json:"created_at"`
+}
+
 type Loja struct {
 	ID          uuid.UUID          `json:"id"`
 	EmpresaID   uuid.UUID          `json:"empresa_id"`
@@ -167,6 +211,18 @@ type Permisso struct {
 	Chave     string      `json:"chave"`
 	Descricao pgtype.Text `json:"descricao"`
 	CreatedAt time.Time   `json:"created_at"`
+}
+
+type Produto struct {
+	ID         uuid.UUID          `json:"id"`
+	EmpresaID  uuid.UUID          `json:"empresa_id"`
+	Nome       string             `json:"nome"`
+	SkuExterno pgtype.Text        `json:"sku_externo"`
+	Categoria  pgtype.Text        `json:"categoria"`
+	Ativo      bool               `json:"ativo"`
+	CreatedAt  time.Time          `json:"created_at"`
+	UpdatedAt  time.Time          `json:"updated_at"`
+	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type ProdutosCanonico struct {

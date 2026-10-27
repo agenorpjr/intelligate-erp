@@ -58,6 +58,9 @@ func main() {
 	eventoIngestaoRepo := db.NewEventoIngestaoRepository(dbpool)
 	vendasResumoRepo := db.NewVendasResumoRepository(dbpool)
 	salesTxRepo := db.NewSalesTxRepository(dbpool)
+	insumoRepo := db.NewInsumoRepository(dbpool)
+	produtoRepo := db.NewProdutoRepository(dbpool)
+	fichaTecnicaRepo := db.NewFichaTecnicaRepository(dbpool)
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
@@ -73,11 +76,24 @@ func main() {
 		vendasResumoRepo,
 		salesTxRepo,
 	)
+	insumoUsecase := usecase.NewInsumoUsecase(insumoRepo, auditoriaRepo)
+	produtoUsecase := usecase.NewProdutoUsecase(produtoRepo, auditoriaRepo)
+	fichaTecnicaUsecase := usecase.NewFichaTecnicaUsecase(
+		fichaTecnicaRepo,
+		produtoRepo,
+		lojaRepo,
+		insumoRepo,
+		auditoriaRepo,
+	)
 
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
 	salesHandler := httpadapter.NewSalesHandler(salesUsecase)
+	insumoHandler := httpadapter.NewInsumoHandler(insumoUsecase)
+	produtoHandler := httpadapter.NewProdutoHandler(produtoUsecase)
+	fichaTecnicaHandler := httpadapter.NewFichaTecnicaHandler(fichaTecnicaUsecase)
+	cmvHandler := httpadapter.NewCMVHandler(fichaTecnicaUsecase)
 	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
 
 	// Create router
@@ -109,6 +125,37 @@ func main() {
 			r.Get("/lojas/{id}", lojaHandler.BuscarPorID)
 			r.Put("/lojas/{id}", lojaHandler.Atualizar)
 			r.Delete("/lojas/{id}", lojaHandler.Deletar)
+
+			// Insumos
+			r.Post("/insumos", insumoHandler.Create)
+			r.Get("/insumos", insumoHandler.List)
+			r.Get("/insumos/{id}", insumoHandler.GetByID)
+			r.Put("/insumos/{id}", insumoHandler.Update)
+			r.Delete("/insumos/{id}", insumoHandler.Delete)
+			r.Post("/insumos/{id}/custos", insumoHandler.CreateCusto)
+			r.Get("/insumos/{id}/custos", insumoHandler.ListCustos)
+			r.Get("/insumos/{id}/custos/vigente", insumoHandler.GetCustoVigente)
+			r.Get("/insumos/{id}/custos/atual", insumoHandler.GetCustoAtual)
+
+			// Produtos
+			r.Post("/produtos", produtoHandler.Create)
+			r.Get("/produtos", produtoHandler.List)
+			r.Get("/produtos/{id}", produtoHandler.GetByID)
+			r.Put("/produtos/{id}", produtoHandler.Update)
+			r.Delete("/produtos/{id}", produtoHandler.Delete)
+
+			// Fichas Técnicas
+			r.Post("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.Create)
+			r.Get("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByProduto)
+			r.Get("/fichas-tecnicas/{id}", fichaTecnicaHandler.GetByID)
+			r.Put("/fichas-tecnicas/{id}", fichaTecnicaHandler.Update)
+			r.Delete("/fichas-tecnicas/{id}", fichaTecnicaHandler.Delete)
+			r.Get("/lojas/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByLoja)
+			r.Get("/fichas-tecnicas", fichaTecnicaHandler.ListByEmpresa)
+
+			// CMV
+			r.Get("/cmv/resumo", cmvHandler.GetCMVResumo)
+			r.Get("/cmv/produtos", cmvHandler.GetCMVProdutosDetalhe)
 
 			// Vendas / Ingestão
 			r.Post("/ingest/sales-event", salesHandler.IngestSalesEvent)

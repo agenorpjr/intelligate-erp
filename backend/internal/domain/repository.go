@@ -146,3 +146,45 @@ type EventoIngestaoRepository interface {
 type VendasResumoRepository interface {
 	GetResumo(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim *time.Time) (*VendasResumo, error)
 }
+
+// CMV domain repositories
+type InsumoRepository interface {
+	Create(ctx context.Context, i *Insumo) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Insumo, error)
+	GetByNome(ctx context.Context, empresaID uuid.UUID, nome string) (*Insumo, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, ativo *bool, limit, offset int) ([]*Insumo, error)
+	Update(ctx context.Context, i *Insumo) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	CreateCusto(ctx context.Context, c *InsumoCusto) error
+	GetCustoVigente(ctx context.Context, insumoID uuid.UUID, dataVigencia time.Time) (*InsumoCusto, error)
+	GetCustoAtual(ctx context.Context, insumoID uuid.UUID) (*InsumoCusto, error)
+	ListCustosByInsumo(ctx context.Context, insumoID uuid.UUID, limit, offset int) ([]*InsumoCusto, error)
+}
+
+type ProdutoRepository interface {
+	Create(ctx context.Context, p *Produto) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Produto, error)
+	GetBySKUExterno(ctx context.Context, empresaID uuid.UUID, skuExterno string) (*Produto, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, ativo *bool, limit, offset int) ([]*Produto, error)
+	Update(ctx context.Context, p *Produto) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type FichaTecnicaRepository interface {
+	Create(ctx context.Context, ft *FichaTecnica) error
+	GetByID(ctx context.Context, id uuid.UUID) (*FichaTecnica, error)
+	GetByProdutoLoja(ctx context.Context, produtoID, lojaID uuid.UUID) (*FichaTecnica, error)
+	ListByProduto(ctx context.Context, produtoID uuid.UUID, ativo *bool, limit, offset int) ([]*FichaTecnica, error)
+	ListByLoja(ctx context.Context, lojaID uuid.UUID, ativo *bool, limit, offset int) ([]*FichaTecnica, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, ativo *bool, limit, offset int) ([]*FichaTecnica, error)
+	Update(ctx context.Context, ft *FichaTecnica) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	CreateComponente(ctx context.Context, c *FichaTecnicaComponente) error
+	GetComponentes(ctx context.Context, fichaTecnicaID uuid.UUID) ([]*FichaTecnicaComponente, error)
+	UpdateComponente(ctx context.Context, c *FichaTecnicaComponente) error
+	DeleteComponente(ctx context.Context, id uuid.UUID) error
+	DeleteComponentesByFicha(ctx context.Context, fichaTecnicaID uuid.UUID) error
+	GetCMVResumo(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (*CMVResumo, error)
+	GetCMVProdutosDetalhe(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time, limit, offset int) ([]*CMVProdutoDetalhe, error)
+	GetProdutosSemFichaTecnica(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time, limit, offset int) ([]*CMVProdutoDetalhe, error)
+}

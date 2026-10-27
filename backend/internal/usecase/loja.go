@@ -169,16 +169,3 @@ func (uc *LojaUsecase) Deletar(ctx context.Context, id uuid.UUID, usuarioID uuid
 
 	return nil
 }
-
-func toJSON(v interface{}) string {
-	// Simplified - in production use json.Marshal
-	return "{}"
-}
-
-func stringPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
