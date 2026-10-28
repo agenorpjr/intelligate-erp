@@ -44,7 +44,7 @@ func main() {
 	papelPermissaoRepo := db.NewPapelPermissaoRepository(dbpool)
 
 	// Initialize usecases
-	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	authUsecase := usecase.NewAuthUsecase(usuarioRepo, usuarioPapelRepo, papelRepo, papelPermissaoRepo, cfg.JWTSecret, cfg.JWTExpiry)
 
 	// Run seed
 	if err := runSeed(ctx, authUsecase, empresaRepo, lojaRepo, usuarioRepo, papelRepo, permissaoRepo, usuarioPapelRepo, papelPermissaoRepo); err != nil {
@@ -90,12 +90,12 @@ func runSeed(ctx context.Context, authUsecase *usecase.AuthUsecase, empresaRepo 
 	}
 	log.Printf("Usuário admin: %s (ID: %s)", adminUser.Email, adminUser.ID)
 
-	// 6. Associate user with ADMIN role
-	err = associateUserWithRole(ctx, usuarioPapelRepo, adminUser.ID, papelAdmin.ID, loja.ID)
+	// 6. Associate user with ADMIN role (acesso global: loja_id NULL)
+	err = associateUserWithRole(ctx, usuarioPapelRepo, adminUser.ID, papelAdmin.ID, nil)
 	if err != nil {
 		return err
 	}
-	log.Printf("Usuário associado ao papel ADMIN na loja %s", loja.Nome)
+	log.Printf("Usuário associado ao papel ADMIN com acesso global (todas as lojas)")
 
 	return nil
 }
@@ -153,74 +153,58 @@ func getOrCreateLoja(ctx context.Context, repo *db.LojaRepository, empresaID uui
 }
 
 func getOrCreatePermissoes(ctx context.Context, repo *db.PermissaoRepository) (map[string]*domain.Permissao, error) {
-	permissoesNecessarias := []struct {
-		chave     string
-		descricao string
-	}{
-		{"loja:create", "Criar lojas"},
-		{"loja:read", "Visualizar lojas"},
-		{"loja:update", "Atualizar lojas"},
-		{"loja:delete", "Excluir lojas"},
-		{"usuario:create", "Criar usuários"},
-		{"usuario:read", "Visualizar usuários"},
-		{"usuario:update", "Atualizar usuários"},
-		{"usuario:delete", "Excluir usuários"},
-		{"papel:create", "Criar papéis"},
-		{"papel:read", "Visualizar papéis"},
-		{"papel:update", "Atualizar papéis"},
-		{"papel:delete", "Excluir papéis"},
-		{"permissao:read", "Visualizar permissões"},
-		{"empresa:read", "Visualizar empresa"},
-		{"empresa:update", "Atualizar empresa"},
-		{"auditoria:read", "Visualizar auditoria"},
-	}
-
+	// Catálogo padronizado no formato modulo.acao (Etapa 14).
+	// Fonte única de verdade: domain.AllPermissions().
 	result := make(map[string]*domain.Permissao)
-	for _, p := range permissoesNecessarias {
-		permissao, err := repo.GetByChave(ctx, p.chave)
+	for _, chave := range domain.AllPermissions() {
+		permissao, err := repo.GetByChave(ctx, chave)
 		if err == nil && permissao != nil {
-			result[p.chave] = permissao
+			result[chave] = permissao
 			continue
 		}
 
-		descricao := p.descricao
+		descricao := chave
 		permissao = &domain.Permissao{
-			Chave:     p.chave,
+			Chave:     chave,
 			Descricao: &descricao,
 		}
 		if err := repo.Create(ctx, permissao); err != nil {
 			return nil, err
 		}
-		result[p.chave] = permissao
+		result[chave] = permissao
 	}
 	return result, nil
 }
 
 func getOrCreatePapelAdmin(ctx context.Context, papelRepo *db.PapelRepository, empresaID uuid.UUID, permissaoRepo *db.PermissaoRepository, papelPermissaoRepo *db.PapelPermissaoRepository, permissoes map[string]*domain.Permissao) (*domain.Papel, error) {
 	// Try to find existing ADMIN role
+	var papelAdmin *domain.Papel
 	papeis, err := papelRepo.ListByEmpresa(ctx, empresaID, 100, 0)
 	if err == nil {
 		for _, p := range papeis {
 			if p.Nome == "ADMIN" {
-				log.Println("Papel ADMIN já existe, pulando criação")
-				return p, nil
+				papelAdmin = p
+				break
 			}
 		}
 	}
 
-	// Create ADMIN role
-	descricao := "Administrador do sistema com acesso total"
-	papelAdmin := &domain.Papel{
-		EmpresaID: empresaID,
-		Nome:      "ADMIN",
-		Descricao: &descricao,
-		Sistema:   true,
-	}
-	if err := papelRepo.Create(ctx, papelAdmin); err != nil {
-		return nil, err
+	if papelAdmin == nil {
+		// Create ADMIN role
+		descricao := "Administrador do sistema com acesso total"
+		papelAdmin = &domain.Papel{
+			EmpresaID: empresaID,
+			Nome:      "ADMIN",
+			Descricao: &descricao,
+			Sistema:   true,
+		}
+		if err := papelRepo.Create(ctx, papelAdmin); err != nil {
+			return nil, err
+		}
 	}
 
-	// Associate all permissions with ADMIN role
+	// Garante que o papel ADMIN tenha todas as permissões do catálogo.
+	// CreatePapelPermissao usa ON CONFLICT DO NOTHING, portanto é idempotente.
 	for _, permissao := range permissoes {
 		if err := papelPermissaoRepo.Create(ctx, papelAdmin.ID, permissao.ID); err != nil {
 			return nil, err
@@ -260,13 +244,13 @@ func getOrCreateAdminUser(ctx context.Context, usuarioRepo *db.UsuarioRepository
 	return usuario, nil
 }
 
-func associateUserWithRole(ctx context.Context, repo *db.UsuarioPapelRepository, usuarioID, papelID, lojaID uuid.UUID) error {
+func associateUserWithRole(ctx context.Context, repo *db.UsuarioPapelRepository, usuarioID, papelID uuid.UUID, lojaID *uuid.UUID) error {
 	// Check if association already exists
 	associacoes, err := repo.ListByUsuario(ctx, usuarioID)
 	if err == nil {
 		for _, a := range associacoes {
-			if a.PapelID == papelID && a.LojaID != nil && *a.LojaID == lojaID {
-				log.Println("Associação usuário-papel-loja já existe, pulando")
+			if a.PapelID == papelID && sameLoja(a.LojaID, lojaID) {
+				log.Println("Associação usuário-papel já existe, pulando")
 				return nil
 			}
 		}
@@ -276,9 +260,17 @@ func associateUserWithRole(ctx context.Context, repo *db.UsuarioPapelRepository,
 	associacao := &domain.UsuarioPapel{
 		UsuarioID: usuarioID,
 		PapelID:   papelID,
-		LojaID:    &lojaID,
+		LojaID:    lojaID,
 	}
 	return repo.Create(ctx, associacao)
+}
+
+// sameLoja compara dois ponteiros de loja tratando nil como "acesso global".
+func sameLoja(a, b *uuid.UUID) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 func toJSON(v interface{}) string {

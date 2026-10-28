@@ -96,9 +96,134 @@ func (m *mockUsuarioRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
+// mockUsuarioPapelRepository implementa domain.UsuarioPapelRepository para testes.
+type mockUsuarioPapelRepository struct {
+	associacoes []*domain.UsuarioPapelComDetalhes
+}
+
+func (m *mockUsuarioPapelRepository) Create(ctx context.Context, up *domain.UsuarioPapel) error {
+	m.associacoes = append(m.associacoes, &domain.UsuarioPapelComDetalhes{
+		ID:        up.ID,
+		UsuarioID: up.UsuarioID,
+		PapelID:   up.PapelID,
+		LojaID:    up.LojaID,
+	})
+	return nil
+}
+
+func (m *mockUsuarioPapelRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.UsuarioPapel, error) {
+	for _, a := range m.associacoes {
+		if a.ID == id {
+			return &domain.UsuarioPapel{
+				ID:        a.ID,
+				UsuarioID: a.UsuarioID,
+				PapelID:   a.PapelID,
+				LojaID:    a.LojaID,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockUsuarioPapelRepository) ListByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]*domain.UsuarioPapelComDetalhes, error) {
+	var result []*domain.UsuarioPapelComDetalhes
+	for _, a := range m.associacoes {
+		if a.UsuarioID == usuarioID {
+			result = append(result, a)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockUsuarioPapelRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	for i, a := range m.associacoes {
+		if a.ID == id {
+			m.associacoes = append(m.associacoes[:i], m.associacoes[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
+
+// mockPapelRepository implementa domain.PapelRepository para testes.
+type mockPapelRepository struct {
+	papeis map[uuid.UUID]*domain.Papel
+}
+
+func newMockPapelRepository() *mockPapelRepository {
+	return &mockPapelRepository{papeis: make(map[uuid.UUID]*domain.Papel)}
+}
+
+func (m *mockPapelRepository) Create(ctx context.Context, p *domain.Papel) error {
+	m.papeis[p.ID] = p
+	return nil
+}
+
+func (m *mockPapelRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Papel, error) {
+	if p, ok := m.papeis[id]; ok {
+		return p, nil
+	}
+	return nil, nil
+}
+
+func (m *mockPapelRepository) ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*domain.Papel, error) {
+	var result []*domain.Papel
+	for _, p := range m.papeis {
+		if p.EmpresaID == empresaID {
+			result = append(result, p)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockPapelRepository) Update(ctx context.Context, p *domain.Papel) error {
+	m.papeis[p.ID] = p
+	return nil
+}
+
+func (m *mockPapelRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	delete(m.papeis, id)
+	return nil
+}
+
+// mockPapelPermissaoRepository implementa domain.PapelPermissaoRepository para testes.
+type mockPapelPermissaoRepository struct {
+	porPapel map[uuid.UUID][]*domain.Permissao
+}
+
+func newMockPapelPermissaoRepository() *mockPapelPermissaoRepository {
+	return &mockPapelPermissaoRepository{porPapel: make(map[uuid.UUID][]*domain.Permissao)}
+}
+
+func (m *mockPapelPermissaoRepository) Create(ctx context.Context, papelID, permissaoID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockPapelPermissaoRepository) Delete(ctx context.Context, papelID, permissaoID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockPapelPermissaoRepository) ListPermissoesByPapel(ctx context.Context, papelID uuid.UUID) ([]*domain.Permissao, error) {
+	return m.porPapel[papelID], nil
+}
+
+func (m *mockPapelPermissaoRepository) ListPermissoesByUsuario(ctx context.Context, usuarioID, lojaID uuid.UUID) ([]*domain.Permissao, error) {
+	return nil, nil
+}
+
+// newTestAuthUsecase monta um AuthUsecase com repositórios mockados.
+func newTestAuthUsecase(
+	usuarioRepo domain.UsuarioRepository,
+	usuarioPapelRepo domain.UsuarioPapelRepository,
+	papelRepo domain.PapelRepository,
+	papelPermissaoRepo domain.PapelPermissaoRepository,
+) *AuthUsecase {
+	return NewAuthUsecase(usuarioRepo, usuarioPapelRepo, papelRepo, papelPermissaoRepo, "test-secret", 24*time.Hour)
+}
+
 func TestAuthUsecase_Login_Success(t *testing.T) {
 	repo := newMockUsuarioRepository()
-	uc := NewAuthUsecase(repo, "test-secret", 24*time.Hour)
+	uc := newTestAuthUsecase(repo, &mockUsuarioPapelRepository{}, newMockPapelRepository(), newMockPapelPermissaoRepository())
 
 	// Create user with hashed password
 	senhaHash, _ := uc.HashSenha("senha123")
@@ -128,7 +253,7 @@ func TestAuthUsecase_Login_Success(t *testing.T) {
 
 func TestAuthUsecase_Login_InvalidCredentials(t *testing.T) {
 	repo := newMockUsuarioRepository()
-	uc := NewAuthUsecase(repo, "test-secret", 24*time.Hour)
+	uc := newTestAuthUsecase(repo, &mockUsuarioPapelRepository{}, newMockPapelRepository(), newMockPapelPermissaoRepository())
 
 	// Test with non-existent user
 	_, err := uc.Login(context.Background(), domain.LoginInput{
@@ -158,7 +283,7 @@ func TestAuthUsecase_Login_InvalidCredentials(t *testing.T) {
 
 func TestAuthUsecase_Login_InactiveUser(t *testing.T) {
 	repo := newMockUsuarioRepository()
-	uc := NewAuthUsecase(repo, "test-secret", 24*time.Hour)
+	uc := newTestAuthUsecase(repo, &mockUsuarioPapelRepository{}, newMockPapelRepository(), newMockPapelPermissaoRepository())
 
 	senhaHash, _ := uc.HashSenha("senha123")
 	usuario := &domain.Usuario{
@@ -180,7 +305,7 @@ func TestAuthUsecase_Login_InactiveUser(t *testing.T) {
 
 func TestAuthUsecase_ValidateToken(t *testing.T) {
 	repo := newMockUsuarioRepository()
-	uc := NewAuthUsecase(repo, "test-secret", 24*time.Hour)
+	uc := newTestAuthUsecase(repo, &mockUsuarioPapelRepository{}, newMockPapelRepository(), newMockPapelPermissaoRepository())
 
 	senhaHash, _ := uc.HashSenha("senha123")
 	usuario := &domain.Usuario{
@@ -210,7 +335,7 @@ func TestAuthUsecase_ValidateToken(t *testing.T) {
 
 func TestAuthUsecase_GetUsuarioFromToken(t *testing.T) {
 	repo := newMockUsuarioRepository()
-	uc := NewAuthUsecase(repo, "test-secret", 24*time.Hour)
+	uc := newTestAuthUsecase(repo, &mockUsuarioPapelRepository{}, newMockPapelRepository(), newMockPapelPermissaoRepository())
 
 	senhaHash, _ := uc.HashSenha("senha123")
 	usuario := &domain.Usuario{
@@ -235,4 +360,139 @@ func TestAuthUsecase_GetUsuarioFromToken(t *testing.T) {
 	assert.Equal(t, usuario.ID, user.ID)
 	assert.Equal(t, usuario.Email, user.Email)
 	assert.Empty(t, user.SenhaHash)
+}
+
+func TestAuthUsecase_GetPermissoesUsuario_AggregatesRoles(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	usuarioID := uuid.New()
+
+	usuarioRepo := newMockUsuarioRepository()
+	usuarioRepo.usuarios["u@test.com"] = &domain.Usuario{ID: usuarioID, EmpresaID: empresaID, Email: "u@test.com", Ativo: true}
+
+	papelA := uuid.New()
+	papelB := uuid.New()
+	papelRepo := newMockPapelRepository()
+	papelRepo.papeis[papelA] = &domain.Papel{ID: papelA, EmpresaID: empresaID, Nome: "A"}
+	papelRepo.papeis[papelB] = &domain.Papel{ID: papelB, EmpresaID: empresaID, Nome: "B"}
+
+	upRepo := &mockUsuarioPapelRepository{associacoes: []*domain.UsuarioPapelComDetalhes{
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelA},
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelB},
+	}}
+
+	ppRepo := newMockPapelPermissaoRepository()
+	ppRepo.porPapel[papelA] = []*domain.Permissao{{Chave: domain.PermLojasListar}, {Chave: domain.PermLojasCriar}}
+	ppRepo.porPapel[papelB] = []*domain.Permissao{{Chave: domain.PermLojasListar}, {Chave: domain.PermDashboardVer}}
+
+	uc := newTestAuthUsecase(usuarioRepo, upRepo, papelRepo, ppRepo)
+
+	permissoes, err := uc.GetPermissoesUsuario(ctx, usuarioID, empresaID)
+	require.NoError(t, err)
+	// Deduplicado e ordenado
+	assert.Equal(t, []string{domain.PermDashboardVer, domain.PermLojasCriar, domain.PermLojasListar}, permissoes)
+}
+
+func TestAuthUsecase_GetPermissoesUsuario_IsolaPorEmpresa(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	outraEmpresaID := uuid.New()
+	usuarioID := uuid.New()
+
+	usuarioRepo := newMockUsuarioRepository()
+	usuarioRepo.usuarios["u@test.com"] = &domain.Usuario{ID: usuarioID, EmpresaID: empresaID, Email: "u@test.com", Ativo: true}
+
+	papelProprio := uuid.New()
+	papelOutraEmpresa := uuid.New()
+	papelRepo := newMockPapelRepository()
+	papelRepo.papeis[papelProprio] = &domain.Papel{ID: papelProprio, EmpresaID: empresaID, Nome: "Proprio"}
+	papelRepo.papeis[papelOutraEmpresa] = &domain.Papel{ID: papelOutraEmpresa, EmpresaID: outraEmpresaID, Nome: "Outra"}
+
+	upRepo := &mockUsuarioPapelRepository{associacoes: []*domain.UsuarioPapelComDetalhes{
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelProprio},
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelOutraEmpresa},
+	}}
+
+	ppRepo := newMockPapelPermissaoRepository()
+	ppRepo.porPapel[papelProprio] = []*domain.Permissao{{Chave: domain.PermLojasListar}}
+	ppRepo.porPapel[papelOutraEmpresa] = []*domain.Permissao{{Chave: domain.PermUsuariosDeletar}}
+
+	uc := newTestAuthUsecase(usuarioRepo, upRepo, papelRepo, ppRepo)
+
+	permissoes, err := uc.GetPermissoesUsuario(ctx, usuarioID, empresaID)
+	require.NoError(t, err)
+	assert.Equal(t, []string{domain.PermLojasListar}, permissoes)
+	assert.NotContains(t, permissoes, domain.PermUsuariosDeletar)
+}
+
+func TestAuthUsecase_GetLojasUsuario_GlobalQuandoPapelSemLoja(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	usuarioID := uuid.New()
+
+	usuarioRepo := newMockUsuarioRepository()
+	usuarioRepo.usuarios["u@test.com"] = &domain.Usuario{ID: usuarioID, EmpresaID: empresaID, Email: "u@test.com", Ativo: true}
+
+	papelID := uuid.New()
+	papelRepo := newMockPapelRepository()
+	papelRepo.papeis[papelID] = &domain.Papel{ID: papelID, EmpresaID: empresaID, Nome: "Admin"}
+
+	upRepo := &mockUsuarioPapelRepository{associacoes: []*domain.UsuarioPapelComDetalhes{
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelID, LojaID: nil},
+	}}
+
+	uc := newTestAuthUsecase(usuarioRepo, upRepo, papelRepo, newMockPapelPermissaoRepository())
+
+	lojas, err := uc.GetLojasUsuario(ctx, usuarioID, empresaID)
+	require.NoError(t, err)
+	assert.Empty(t, lojas) // vazio = acesso global
+}
+
+func TestAuthUsecase_GetLojasUsuario_RetornaLojasEspecificas(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	usuarioID := uuid.New()
+	lojaID := uuid.New()
+
+	usuarioRepo := newMockUsuarioRepository()
+	usuarioRepo.usuarios["u@test.com"] = &domain.Usuario{ID: usuarioID, EmpresaID: empresaID, Email: "u@test.com", Ativo: true}
+
+	papelID := uuid.New()
+	papelRepo := newMockPapelRepository()
+	papelRepo.papeis[papelID] = &domain.Papel{ID: papelID, EmpresaID: empresaID, Nome: "Gerente"}
+
+	upRepo := &mockUsuarioPapelRepository{associacoes: []*domain.UsuarioPapelComDetalhes{
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelID, LojaID: &lojaID},
+	}}
+
+	uc := newTestAuthUsecase(usuarioRepo, upRepo, papelRepo, newMockPapelPermissaoRepository())
+
+	lojas, err := uc.GetLojasUsuario(ctx, usuarioID, empresaID)
+	require.NoError(t, err)
+	assert.Equal(t, []uuid.UUID{lojaID}, lojas)
+}
+
+func TestAuthUsecase_GetLojasUsuario_IsolaPorEmpresa(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	outraEmpresaID := uuid.New()
+	usuarioID := uuid.New()
+	lojaID := uuid.New()
+
+	usuarioRepo := newMockUsuarioRepository()
+	usuarioRepo.usuarios["u@test.com"] = &domain.Usuario{ID: usuarioID, EmpresaID: empresaID, Email: "u@test.com", Ativo: true}
+
+	papelOutraEmpresa := uuid.New()
+	papelRepo := newMockPapelRepository()
+	papelRepo.papeis[papelOutraEmpresa] = &domain.Papel{ID: papelOutraEmpresa, EmpresaID: outraEmpresaID, Nome: "Outra"}
+
+	upRepo := &mockUsuarioPapelRepository{associacoes: []*domain.UsuarioPapelComDetalhes{
+		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelOutraEmpresa, LojaID: &lojaID},
+	}}
+
+	uc := newTestAuthUsecase(usuarioRepo, upRepo, papelRepo, newMockPapelPermissaoRepository())
+
+	lojas, err := uc.GetLojasUsuario(ctx, usuarioID, empresaID)
+	require.NoError(t, err)
+	assert.Empty(t, lojas)
 }

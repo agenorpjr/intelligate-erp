@@ -104,6 +104,7 @@ func (m *mockEmpresaRepository) Delete(ctx context.Context, id uuid.UUID) error 
 
 type mockAuditoriaRepository struct {
 	auditorias []*domain.Auditoria
+	lastFilter domain.AuditoriaFilter
 }
 
 func newMockAuditoriaRepository() *mockAuditoriaRepository {
@@ -118,6 +119,7 @@ func (m *mockAuditoriaRepository) Create(ctx context.Context, a *domain.Auditori
 }
 
 func (m *mockAuditoriaRepository) List(ctx context.Context, filter domain.AuditoriaFilter) ([]*domain.Auditoria, error) {
+	m.lastFilter = filter
 	return m.auditorias, nil
 }
 

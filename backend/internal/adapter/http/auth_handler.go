@@ -59,3 +59,25 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	RespondJSON(w, http.StatusOK, usuario)
 }
+
+// MinhasPermissoes retorna as permissões efetivas do usuário autenticado.
+// Útil para o frontend renderizar menus/ações conforme o RBAC (governança).
+func (h *AuthHandler) MinhasPermissoes(w http.ResponseWriter, r *http.Request) {
+	usuario := GetUsuarioFromContext(r.Context())
+	if usuario == nil {
+		RespondError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Usuário não autenticado", "")
+		return
+	}
+
+	permissoes, err := h.authUsecase.GetPermissoesUsuario(r.Context(), usuario.ID, usuario.EmpresaID)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Erro ao carregar permissões", err.Error())
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"usuario_id": usuario.ID,
+		"empresa_id": usuario.EmpresaID,
+		"permissoes": permissoes,
+	})
+}

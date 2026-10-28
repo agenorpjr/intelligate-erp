@@ -14,8 +14,10 @@ import (
 type contextKey string
 
 const (
-	UserContextKey    contextKey = "user"
-	EmpresaContextKey contextKey = "empresa_id"
+	UserContextKey            contextKey = "user"
+	EmpresaContextKey         contextKey = "empresa_id"
+	PermissoesContextKey      contextKey = "permissoes"
+	LojasPermitidasContextKey contextKey = "lojas_permitidas"
 )
 
 type AuthMiddleware struct {

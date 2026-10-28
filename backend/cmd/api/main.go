@@ -14,6 +14,7 @@ import (
 	"github.com/intelligate/erp/backend/internal/adapter/db"
 	httpadapter "github.com/intelligate/erp/backend/internal/adapter/http"
 	"github.com/intelligate/erp/backend/internal/config"
+	"github.com/intelligate/erp/backend/internal/domain"
 	"github.com/intelligate/erp/backend/internal/usecase"
 	"github.com/intelligate/erp/backend/pkg/crypto"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,6 +52,10 @@ func main() {
 	empresaRepo := db.NewEmpresaRepository(dbpool)
 	lojaRepo := db.NewLojaRepository(dbpool)
 	usuarioRepo := db.NewUsuarioRepository(dbpool)
+	usuarioPapelRepo := db.NewUsuarioPapelRepository(dbpool)
+	papelRepo := db.NewPapelRepository(dbpool)
+	papelPermissaoRepo := db.NewPapelPermissaoRepository(dbpool)
+	permissaoRepo := db.NewPermissaoRepository(dbpool)
 	auditoriaRepo := db.NewAuditoriaRepository(dbpool)
 	pdvOrigemRepo := db.NewPdvOrigemRepository(dbpool)
 	pdvIntegracaoRepo := db.NewPdvIntegracaoRepository(dbpool)
@@ -92,7 +97,7 @@ func main() {
 	}
 
 	// Initialize usecases
-	authUsecase := usecase.NewAuthUsecase(usuarioRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	authUsecase := usecase.NewAuthUsecase(usuarioRepo, usuarioPapelRepo, papelRepo, papelPermissaoRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	lojaUsecase := usecase.NewLojaUsecase(lojaRepo, empresaRepo, auditoriaRepo)
 	salesUsecase := usecase.NewSalesUsecase(
 		pdvOrigemRepo,
@@ -164,6 +169,19 @@ func main() {
 		llmClient,
 	)
 
+	// Initialize usecases
+	papelPermissaoUsecase := usecase.NewPapelPermissaoUsecase(
+		papelRepo,
+		permissaoRepo,
+		usuarioRepo,
+		usuarioPapelRepo,
+		papelPermissaoRepo,
+		auditoriaRepo,
+	)
+
+	// Governança de acesso (Etapa 14) - leitura de auditoria
+	auditoriaUsecase := usecase.NewAuditoriaUsecase(auditoriaRepo)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
@@ -174,6 +192,9 @@ func main() {
 	cmvHandler := httpadapter.NewCMVHandler(fichaTecnicaUsecase)
 	pdvIntegracaoHandler := httpadapter.NewPdvIntegracaoHandler(pdvIntegracaoUsecase)
 	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
+	rbacMiddleware := httpadapter.NewRBACMiddleware(authUsecase)
+	papelPermissaoHandler := httpadapter.NewPapelPermissaoHandler(papelPermissaoUsecase)
+	auditoriaHandler := httpadapter.NewAuditoriaHandler(auditoriaUsecase)
 
 	// Compras handlers
 	fornecedorHandler := httpadapter.NewFornecedorHandler(fornecedorUsecase)
@@ -219,137 +240,442 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.RequireAuth)
 			r.Get("/me", authHandler.Me)
+			r.Get("/me/permissoes", authHandler.MinhasPermissoes)
 
 			// Lojas
-			r.Post("/lojas", lojaHandler.Criar)
-			r.Get("/lojas", lojaHandler.Listar)
-			r.Get("/lojas/{id}", lojaHandler.BuscarPorID)
-			r.Put("/lojas/{id}", lojaHandler.Atualizar)
-			r.Delete("/lojas/{id}", lojaHandler.Deletar)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermLojasCriar))
+				r.Post("/", lojaHandler.Criar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermLojasListar))
+				r.Get("/", lojaHandler.Listar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermLojasVer))
+				r.Get("/{id}", lojaHandler.BuscarPorID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermLojasAtualizar))
+				r.Put("/{id}", lojaHandler.Atualizar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermLojasDeletar))
+				r.Delete("/{id}", lojaHandler.Deletar)
+			})
+
+			// Papéis
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisCriar))
+				r.Post("/papeis", papelPermissaoHandler.CriarPapel)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisListar))
+				r.Get("/papeis", papelPermissaoHandler.ListarPapeis)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisVer))
+				r.Get("/papeis/{id}", papelPermissaoHandler.BuscarPapel)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisAtualizar))
+				r.Put("/papeis/{id}", papelPermissaoHandler.AtualizarPapel)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisDeletar))
+				r.Delete("/papeis/{id}", papelPermissaoHandler.DeletarPapel)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPapeisGerenciarPermissoes))
+				r.Post("/papeis/{papel_id}/permissoes", papelPermissaoHandler.AdicionarPermissaoAoPapel)
+				r.Delete("/papeis/{papel_id}/permissoes/{permissao_id}", papelPermissaoHandler.RemoverPermissaoDoPapel)
+				r.Get("/papeis/{id}/permissoes", papelPermissaoHandler.ListarPermissoesDoPapel)
+			})
+
+			// Permissões
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPermissoesListar))
+				r.Get("/permissoes", papelPermissaoHandler.ListarPermissoes)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermPermissoesVer))
+				r.Get("/permissoes/{id}", papelPermissaoHandler.BuscarPermissao)
+			})
+
+			// Auditoria (governança de acesso)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermAuditoriaListar))
+				r.Get("/auditoria", auditoriaHandler.Listar)
+			})
+
+			// Usuário-Papel
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosGerenciarPapeis))
+				r.Post("/usuarios/{id}/papeis", papelPermissaoHandler.AssociarUsuarioPapel)
+				r.Delete("/usuarios/{id}/papeis/{papel_id}", papelPermissaoHandler.RemoverUsuarioPapel)
+				r.Get("/usuarios/{id}/papeis", papelPermissaoHandler.ListarPapeisDoUsuario)
+			})
 
 			// Insumos
-			r.Post("/insumos", insumoHandler.Create)
-			r.Get("/insumos", insumoHandler.List)
-			r.Get("/insumos/{id}", insumoHandler.GetByID)
-			r.Put("/insumos/{id}", insumoHandler.Update)
-			r.Delete("/insumos/{id}", insumoHandler.Delete)
-			r.Post("/insumos/{id}/custos", insumoHandler.CreateCusto)
-			r.Get("/insumos/{id}/custos", insumoHandler.ListCustos)
-			r.Get("/insumos/{id}/custos/vigente", insumoHandler.GetCustoVigente)
-			r.Get("/insumos/{id}/custos/atual", insumoHandler.GetCustoAtual)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosCriar))
+				r.Post("/", insumoHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosListar))
+				r.Get("/", insumoHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosVer))
+				r.Get("/{id}", insumoHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosAtualizar))
+				r.Put("/{id}", insumoHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosDeletar))
+				r.Delete("/{id}", insumoHandler.Delete)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermInsumosGerenciarCustos))
+				r.Post("/{id}/custos", insumoHandler.CreateCusto)
+				r.Get("/{id}/custos", insumoHandler.ListCustos)
+				r.Get("/{id}/custos/vigente", insumoHandler.GetCustoVigente)
+				r.Get("/{id}/custos/atual", insumoHandler.GetCustoAtual)
+			})
 
 			// Produtos
-			r.Post("/produtos", produtoHandler.Create)
-			r.Get("/produtos", produtoHandler.List)
-			r.Get("/produtos/{id}", produtoHandler.GetByID)
-			r.Put("/produtos/{id}", produtoHandler.Update)
-			r.Delete("/produtos/{id}", produtoHandler.Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermProdutosCriar))
+				r.Post("/", produtoHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermProdutosListar))
+				r.Get("/", produtoHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermProdutosVer))
+				r.Get("/{id}", produtoHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermProdutosAtualizar))
+				r.Put("/{id}", produtoHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermProdutosDeletar))
+				r.Delete("/{id}", produtoHandler.Delete)
+			})
 
 			// Fichas Técnicas
-			r.Post("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.Create)
-			r.Get("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByProduto)
-			r.Get("/fichas-tecnicas/{id}", fichaTecnicaHandler.GetByID)
-			r.Put("/fichas-tecnicas/{id}", fichaTecnicaHandler.Update)
-			r.Delete("/fichas-tecnicas/{id}", fichaTecnicaHandler.Delete)
-			r.Get("/lojas/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByLoja)
-			r.Get("/fichas-tecnicas", fichaTecnicaHandler.ListByEmpresa)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasCriar))
+				r.Post("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasListar))
+				r.Get("/produtos/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByProduto)
+				r.Get("/fichas-tecnicas", fichaTecnicaHandler.ListByEmpresa)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasVer))
+				r.Get("/fichas-tecnicas/{id}", fichaTecnicaHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasVer))
+				r.Use(rbacMiddleware.RequireLojaAccess("id"))
+				r.Get("/lojas/{id}/fichas-tecnicas", fichaTecnicaHandler.ListByLoja)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasAtualizar))
+				r.Put("/fichas-tecnicas/{id}", fichaTecnicaHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFichasTecnicasDeletar))
+				r.Delete("/fichas-tecnicas/{id}", fichaTecnicaHandler.Delete)
+			})
 
 			// CMV
-			r.Get("/cmv/resumo", cmvHandler.GetCMVResumo)
-			r.Get("/cmv/produtos", cmvHandler.GetCMVProdutosDetalhe)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCMVVerResumo))
+				r.Get("/cmv/resumo", cmvHandler.GetCMVResumo)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCMVVerDetalhe))
+				r.Get("/cmv/produtos", cmvHandler.GetCMVProdutosDetalhe)
+			})
 
 			// Vendas / Ingestão
-			r.Post("/ingest/sales-event", salesHandler.IngestSalesEvent)
-			r.Get("/vendas/resumo", salesHandler.GetVendasResumo)
-			r.Get("/vendas", salesHandler.ListPedidos)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermVendasIngest))
+				r.Post("/ingest/sales-event", salesHandler.IngestSalesEvent)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermVendasVerResumo))
+				r.Get("/vendas/resumo", salesHandler.GetVendasResumo)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermVendasListar))
+				r.Get("/vendas", salesHandler.ListPedidos)
+			})
 
 			// Integrações PDV
-			r.Post("/integracoes", pdvIntegracaoHandler.Criar)
-			r.Get("/integracoes", pdvIntegracaoHandler.Listar)
-			r.Get("/integracoes/{id}", pdvIntegracaoHandler.BuscarPorID)
-			r.Put("/integracoes/{id}", pdvIntegracaoHandler.Atualizar)
-			r.Delete("/integracoes/{id}", pdvIntegracaoHandler.Deletar)
-			r.Post("/integracoes/{id}/sincronizar", pdvIntegracaoHandler.Sincronizar)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesCriar))
+				r.Post("/integracoes", pdvIntegracaoHandler.Criar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesListar))
+				r.Get("/integracoes", pdvIntegracaoHandler.Listar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesVer))
+				r.Get("/integracoes/{id}", pdvIntegracaoHandler.BuscarPorID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesAtualizar))
+				r.Put("/integracoes/{id}", pdvIntegracaoHandler.Atualizar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesDeletar))
+				r.Delete("/integracoes/{id}", pdvIntegracaoHandler.Deletar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermIntegracoesSincronizar))
+				r.Post("/integracoes/{id}/sincronizar", pdvIntegracaoHandler.Sincronizar)
+			})
 
 			// Compras - Fornecedores
-			r.Post("/fornecedores", fornecedorHandler.Create)
-			r.Get("/fornecedores", fornecedorHandler.List)
-			r.Get("/fornecedores/{id}", fornecedorHandler.GetByID)
-			r.Put("/fornecedores/{id}", fornecedorHandler.Update)
-			r.Delete("/fornecedores/{id}", fornecedorHandler.Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFornecedoresCriar))
+				r.Post("/fornecedores", fornecedorHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFornecedoresListar))
+				r.Get("/fornecedores", fornecedorHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFornecedoresVer))
+				r.Get("/fornecedores/{id}", fornecedorHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFornecedoresAtualizar))
+				r.Put("/fornecedores/{id}", fornecedorHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFornecedoresDeletar))
+				r.Delete("/fornecedores/{id}", fornecedorHandler.Delete)
+			})
 
 			// Compras - Ordens de Compra
-			r.Post("/ordens-compra", ordemCompraHandler.Create)
-			r.Get("/ordens-compra", ordemCompraHandler.List)
-			r.Get("/ordens-compra/{id}", ordemCompraHandler.GetByID)
-			r.Put("/ordens-compra/{id}", ordemCompraHandler.Update)
-			r.Delete("/ordens-compra/{id}", ordemCompraHandler.Cancel)
-			r.Post("/ordens-compra/{id}/itens", ordemCompraHandler.AddItem)
-			r.Put("/ordens-compra/itens/{item_id}", ordemCompraHandler.UpdateItem)
-			r.Delete("/ordens-compra/itens/{item_id}", ordemCompraHandler.RemoveItem)
-			r.Get("/lojas/{loja_id}/ordens-compra", ordemCompraHandler.ListByLoja)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraCriar))
+				r.Post("/ordens-compra", ordemCompraHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraListar))
+				r.Get("/ordens-compra", ordemCompraHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraVer))
+				r.Get("/ordens-compra/{id}", ordemCompraHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraAtualizar))
+				r.Put("/ordens-compra/{id}", ordemCompraHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraDeletar))
+				r.Delete("/ordens-compra/{id}", ordemCompraHandler.Cancel)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraGerenciarItens))
+				r.Post("/ordens-compra/{id}/itens", ordemCompraHandler.AddItem)
+				r.Put("/ordens-compra/itens/{item_id}", ordemCompraHandler.UpdateItem)
+				r.Delete("/ordens-compra/itens/{item_id}", ordemCompraHandler.RemoveItem)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermOrdensCompraListar))
+				r.Use(rbacMiddleware.RequireLojaAccess("loja_id"))
+				r.Get("/lojas/{loja_id}/ordens-compra", ordemCompraHandler.ListByLoja)
+			})
 
 			// Compras - Recebimentos
-			r.Post("/recebimentos-compra", recebimentoCompraHandler.Create)
-			r.Get("/recebimentos-compra/{id}", recebimentoCompraHandler.GetByID)
-			r.Get("/ordens-compra/{ordem_compra_id}/recebimentos", recebimentoCompraHandler.ListByOrdemCompra)
-			r.Get("/recebimentos-compra", recebimentoCompraHandler.ListByFilter)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermRecebimentosCriar))
+				r.Post("/recebimentos-compra", recebimentoCompraHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermRecebimentosVer))
+				r.Get("/recebimentos-compra/{id}", recebimentoCompraHandler.GetByID)
+				r.Get("/ordens-compra/{ordem_compra_id}/recebimentos", recebimentoCompraHandler.ListByOrdemCompra)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermRecebimentosListar))
+				r.Get("/recebimentos-compra", recebimentoCompraHandler.ListByFilter)
+			})
 
 			// Compras - Contas a Pagar
-			r.Post("/contas-pagar", contaPagarHandler.Create)
-			r.Get("/contas-pagar", contaPagarHandler.List)
-			r.Get("/contas-pagar/{id}", contaPagarHandler.GetByID)
-			r.Put("/contas-pagar/{id}", contaPagarHandler.Update)
-			r.Post("/contas-pagar/{id}/pagar", contaPagarHandler.Pagar)
-			r.Delete("/contas-pagar/{id}", contaPagarHandler.Delete)
-			r.Get("/contas-pagar/fornecedores/{fornecedor_id}", contaPagarHandler.ListByFornecedor)
-			r.Get("/contas-pagar/status", contaPagarHandler.ListByStatus)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarCriar))
+				r.Post("/contas-pagar", contaPagarHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarListar))
+				r.Get("/contas-pagar", contaPagarHandler.List)
+				r.Get("/contas-pagar/fornecedores/{fornecedor_id}", contaPagarHandler.ListByFornecedor)
+				r.Get("/contas-pagar/status", contaPagarHandler.ListByStatus)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarVer))
+				r.Get("/contas-pagar/{id}", contaPagarHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarAtualizar))
+				r.Put("/contas-pagar/{id}", contaPagarHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarPagar))
+				r.Post("/contas-pagar/{id}/pagar", contaPagarHandler.Pagar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasPagarDeletar))
+				r.Delete("/contas-pagar/{id}", contaPagarHandler.Delete)
+			})
 
 			// Financeiro (Etapa 10) - Plano de Contas Gerencial
-			r.Post("/contas-gerenciais", contaGerencialHandler.Create)
-			r.Get("/contas-gerenciais", contaGerencialHandler.List)
-			r.Get("/contas-gerenciais/hierarquia", contaGerencialHandler.ListWithHierarchy)
-			r.Get("/contas-gerenciais/{id}", contaGerencialHandler.GetByID)
-			r.Put("/contas-gerenciais/{id}", contaGerencialHandler.Update)
-			r.Delete("/contas-gerenciais/{id}", contaGerencialHandler.Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasGerenciaisCriar))
+				r.Post("/contas-gerenciais", contaGerencialHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasGerenciaisListar))
+				r.Get("/contas-gerenciais", contaGerencialHandler.List)
+				r.Get("/contas-gerenciais/hierarquia", contaGerencialHandler.ListWithHierarchy)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasGerenciaisVer))
+				r.Get("/contas-gerenciais/{id}", contaGerencialHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasGerenciaisAtualizar))
+				r.Put("/contas-gerenciais/{id}", contaGerencialHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermContasGerenciaisDeletar))
+				r.Delete("/contas-gerenciais/{id}", contaGerencialHandler.Delete)
+			})
 
 			// Financeiro (Etapa 10) - Categorias Financeiras
-			r.Post("/categorias-financeiras", categoriaFinanceiraHandler.Create)
-			r.Get("/categorias-financeiras", categoriaFinanceiraHandler.List)
-			r.Get("/categorias-financeiras/{id}", categoriaFinanceiraHandler.GetByID)
-			r.Put("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Update)
-			r.Delete("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCategoriasFinanceirasCriar))
+				r.Post("/categorias-financeiras", categoriaFinanceiraHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCategoriasFinanceirasListar))
+				r.Get("/categorias-financeiras", categoriaFinanceiraHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCategoriasFinanceirasVer))
+				r.Get("/categorias-financeiras/{id}", categoriaFinanceiraHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCategoriasFinanceirasAtualizar))
+				r.Put("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermCategoriasFinanceirasDeletar))
+				r.Delete("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Delete)
+			})
 
 			// Financeiro (Etapa 10) - Movimentações de Caixa
-			r.Post("/movimentacoes-caixa", movimentacaoCaixaHandler.Create)
-			r.Get("/movimentacoes-caixa", movimentacaoCaixaHandler.List)
-			r.Get("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.GetByID)
-			r.Put("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Update)
-			r.Delete("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Delete)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermMovimentacoesCaixaCriar))
+				r.Post("/movimentacoes-caixa", movimentacaoCaixaHandler.Create)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermMovimentacoesCaixaListar))
+				r.Get("/movimentacoes-caixa", movimentacaoCaixaHandler.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermMovimentacoesCaixaVer))
+				r.Get("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.GetByID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermMovimentacoesCaixaAtualizar))
+				r.Put("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Update)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermMovimentacoesCaixaDeletar))
+				r.Delete("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Delete)
+			})
 
 			// Financeiro (Etapa 10) - DRE Gerencial
-			r.Get("/dre", dreHandler.GetDRE)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermDREVer))
+				r.Get("/dre", dreHandler.GetDRE)
+			})
 
 			// Financeiro (Etapa 10) - Fluxo de Caixa
-			r.Get("/fluxo-caixa", fluxoCaixaHandler.GetFluxoCaixa)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermFluxoCaixaVer))
+				r.Get("/fluxo-caixa", fluxoCaixaHandler.GetFluxoCaixa)
+			})
 
 			// Dashboard (Etapa 11) - Indicadores por loja e período
-			r.Get("/dashboard", dashboardHandler.GetDashboard)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermDashboardVer))
+				r.Get("/dashboard", dashboardHandler.GetDashboard)
+			})
 
 			// Estoque (Etapa 12) - Saldos e movimentações
-			r.Get("/estoque/saldos", estoqueHandler.ListSaldos)
-			r.Get("/estoque/saldos/{insumo_id}", estoqueHandler.GetSaldo)
-			r.Post("/estoque/saidas", estoqueHandler.RegistrarSaida)
-			r.Post("/estoque/ajustes", estoqueHandler.RegistrarAjuste)
-			r.Post("/estoque/transferencias", estoqueHandler.Transferir)
-			r.Get("/estoque/movimentacoes", estoqueHandler.ListMovimentacoes)
-			r.Get("/estoque/perdas", estoqueHandler.GetResumoPerdas)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueVerSaldos))
+				r.Get("/estoque/saldos", estoqueHandler.ListSaldos)
+				r.Get("/estoque/saldos/{insumo_id}", estoqueHandler.GetSaldo)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueRegistrarSaida))
+				r.Use(rbacMiddleware.RequireLojaAccessBody("loja_id"))
+				r.Post("/estoque/saidas", estoqueHandler.RegistrarSaida)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueRegistrarAjuste))
+				r.Use(rbacMiddleware.RequireLojaAccessBody("loja_id"))
+				r.Post("/estoque/ajustes", estoqueHandler.RegistrarAjuste)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueTransferir))
+				r.Use(rbacMiddleware.RequireLojaAccessBody("loja_origem_id"))
+				r.Use(rbacMiddleware.RequireLojaAccessBody("loja_destino_id"))
+				r.Post("/estoque/transferencias", estoqueHandler.Transferir)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueVerMovimentacoes))
+				r.Get("/estoque/movimentacoes", estoqueHandler.ListMovimentacoes)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermEstoqueVerPerdas))
+				r.Get("/estoque/perdas", estoqueHandler.GetResumoPerdas)
+			})
 
 			// Agente de IA (Etapa 13) - Análise gerencial
-			r.Post("/agente/sessoes", agenteHandler.CriarSessao)
-			r.Get("/agente/sessoes", agenteHandler.ListarSessoes)
-			r.Get("/agente/sessoes/{id}", agenteHandler.ObterSessao)
-			r.Post("/agente/sessoes/{id}/perguntas", agenteHandler.Perguntar)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermAgenteCriarSessao))
+				r.Post("/agente/sessoes", agenteHandler.CriarSessao)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermAgenteListarSessoes))
+				r.Get("/agente/sessoes", agenteHandler.ListarSessoes)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermAgenteVerSessao))
+				r.Get("/agente/sessoes/{id}", agenteHandler.ObterSessao)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermAgentePerguntar))
+				r.Post("/agente/sessoes/{id}/perguntas", agenteHandler.Perguntar)
+			})
 		})
 	})
 

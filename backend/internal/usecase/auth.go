@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,16 +21,29 @@ var (
 )
 
 type AuthUsecase struct {
-	usuarioRepo domain.UsuarioRepository
-	jwtSecret   string
-	jwtExpiry   time.Duration
+	usuarioRepo        domain.UsuarioRepository
+	usuarioPapelRepo   domain.UsuarioPapelRepository
+	papelRepo          domain.PapelRepository
+	papelPermissaoRepo domain.PapelPermissaoRepository
+	jwtSecret          string
+	jwtExpiry          time.Duration
 }
 
-func NewAuthUsecase(usuarioRepo domain.UsuarioRepository, jwtSecret string, jwtExpiry time.Duration) *AuthUsecase {
+func NewAuthUsecase(
+	usuarioRepo domain.UsuarioRepository,
+	usuarioPapelRepo domain.UsuarioPapelRepository,
+	papelRepo domain.PapelRepository,
+	papelPermissaoRepo domain.PapelPermissaoRepository,
+	jwtSecret string,
+	jwtExpiry time.Duration,
+) *AuthUsecase {
 	return &AuthUsecase{
-		usuarioRepo: usuarioRepo,
-		jwtSecret:   jwtSecret,
-		jwtExpiry:   jwtExpiry,
+		usuarioRepo:        usuarioRepo,
+		usuarioPapelRepo:   usuarioPapelRepo,
+		papelRepo:          papelRepo,
+		papelPermissaoRepo: papelPermissaoRepo,
+		jwtSecret:          jwtSecret,
+		jwtExpiry:          jwtExpiry,
 	}
 }
 
@@ -139,4 +153,94 @@ func (uc *AuthUsecase) HashSenha(senha string) (string, error) {
 		return "", err
 	}
 	return string(hash), nil
+}
+
+// GetPermissoesUsuario retorna todas as permissões do usuário (agregadas de todos os seus papéis).
+//
+// Isolamento por empresa: apenas papéis pertencentes à empresa informada são
+// considerados. Papéis de outra empresa (ou removidos) são ignorados, garantindo
+// que um usuário nunca receba permissões fora do seu tenant.
+func (uc *AuthUsecase) GetPermissoesUsuario(ctx context.Context, usuarioID, empresaID uuid.UUID) ([]string, error) {
+	// Buscar papéis do usuário
+	papeisUsuario, err := uc.usuarioPapelRepo.ListByUsuario(ctx, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Coletar todas as permissões dos papéis, filtrando por empresa
+	permissoesSet := make(map[string]struct{})
+	for _, up := range papeisUsuario {
+		papel, err := uc.papelRepo.GetByID(ctx, up.PapelID)
+		if err != nil || papel == nil {
+			// Papel removido (soft delete) ou inacessível: ignora (fail-closed).
+			continue
+		}
+		if papel.EmpresaID != empresaID {
+			// Isolamento multi-tenant: nunca agregar permissões de outra empresa.
+			continue
+		}
+
+		permissoes, err := uc.papelPermissaoRepo.ListPermissoesByPapel(ctx, up.PapelID)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range permissoes {
+			permissoesSet[p.Chave] = struct{}{}
+		}
+	}
+
+	// Converter set para slice ordenado (saída determinística)
+	permissoes := make([]string, 0, len(permissoesSet))
+	for p := range permissoesSet {
+		permissoes = append(permissoes, p)
+	}
+	sort.Strings(permissoes)
+
+	return permissoes, nil
+}
+
+// GetLojasUsuario retorna os IDs das lojas que o usuário tem acesso.
+//
+// Retorna slice vazio se o usuário tem acesso a todas as lojas da empresa
+// (papel sem loja_id). Isolamento por empresa: papéis de outra empresa são
+// ignorados.
+func (uc *AuthUsecase) GetLojasUsuario(ctx context.Context, usuarioID, empresaID uuid.UUID) ([]uuid.UUID, error) {
+	papeisUsuario, err := uc.usuarioPapelRepo.ListByUsuario(ctx, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+
+	lojasSet := make(map[uuid.UUID]struct{})
+	temAcessoGlobal := false
+
+	for _, up := range papeisUsuario {
+		papel, err := uc.papelRepo.GetByID(ctx, up.PapelID)
+		if err != nil || papel == nil {
+			// Papel removido (soft delete) ou inacessível: ignora (fail-closed).
+			continue
+		}
+		if papel.EmpresaID != empresaID {
+			// Isolamento multi-tenant: nunca conceder acesso a lojas de outra empresa.
+			continue
+		}
+
+		if up.LojaID == nil {
+			// Papel sem loja específica = acesso a todas as lojas da empresa
+			temAcessoGlobal = true
+		} else {
+			lojasSet[*up.LojaID] = struct{}{}
+		}
+	}
+
+	if temAcessoGlobal {
+		// Retornar slice vazio para indicar acesso a todas as lojas
+		return []uuid.UUID{}, nil
+	}
+
+	lojas := make([]uuid.UUID, 0, len(lojasSet))
+	for id := range lojasSet {
+		lojas = append(lojas, id)
+	}
+
+	return lojas, nil
 }
