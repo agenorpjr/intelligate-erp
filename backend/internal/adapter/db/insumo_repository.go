@@ -164,6 +164,24 @@ func (r *InsumoRepository) ListCustosByInsumo(ctx context.Context, insumoID uuid
 	return custos, nil
 }
 
+func (r *InsumoRepository) GetForUpdate(ctx context.Context, id uuid.UUID) (*domain.Insumo, error) {
+	result, err := r.querier.GetInsumoForUpdate(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return toDomainInsumo(result), nil
+}
+
+func (r *InsumoRepository) UpdateCustoUnitario(ctx context.Context, id uuid.UUID, custoUnitario float64) error {
+	custoUnitarioBig := big.NewInt(int64(custoUnitario * 10000))
+	params := UpdateInsumoCustoUnitarioParams{
+		ID:                 id,
+		CustoUnitarioAtual: pgtype.Numeric{Int: custoUnitarioBig, Exp: -4, Valid: true},
+	}
+	_, err := r.querier.UpdateInsumoCustoUnitario(ctx, params)
+	return err
+}
+
 func toDomainInsumo(i Insumo) *domain.Insumo {
 	var fornecedor *string
 	if i.Fornecedor.Valid {

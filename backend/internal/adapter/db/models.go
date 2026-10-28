@@ -39,6 +39,26 @@ type CategoriasCanonica struct {
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type ContasPagar struct {
+	ID                  uuid.UUID          `json:"id"`
+	EmpresaID           uuid.UUID          `json:"empresa_id"`
+	LojaID              uuid.UUID          `json:"loja_id"`
+	FornecedorID        uuid.UUID          `json:"fornecedor_id"`
+	OrdemCompraID       pgtype.UUID        `json:"ordem_compra_id"`
+	RecebimentoCompraID pgtype.UUID        `json:"recebimento_compra_id"`
+	Descricao           string             `json:"descricao"`
+	Valor               pgtype.Numeric     `json:"valor"`
+	DataEmissao         pgtype.Date        `json:"data_emissao"`
+	DataVencimento      pgtype.Date        `json:"data_vencimento"`
+	DataPagamento       pgtype.Date        `json:"data_pagamento"`
+	Status              string             `json:"status"`
+	FormaPagamento      pgtype.Text        `json:"forma_pagamento"`
+	Observacoes         pgtype.Text        `json:"observacoes"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type Empresa struct {
 	ID           uuid.UUID          `json:"id"`
 	Cnpj         string             `json:"cnpj"`
@@ -89,6 +109,25 @@ type FichasTecnica struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type Fornecedore struct {
+	ID          uuid.UUID          `json:"id"`
+	EmpresaID   uuid.UUID          `json:"empresa_id"`
+	Nome        string             `json:"nome"`
+	CnpjCpf     string             `json:"cnpj_cpf"`
+	Email       pgtype.Text        `json:"email"`
+	Telefone    pgtype.Text        `json:"telefone"`
+	Banco       pgtype.Text        `json:"banco"`
+	Agencia     pgtype.Text        `json:"agencia"`
+	Conta       pgtype.Text        `json:"conta"`
+	TipoConta   pgtype.Text        `json:"tipo_conta"`
+	PixChave    pgtype.Text        `json:"pix_chave"`
+	Observacoes pgtype.Text        `json:"observacoes"`
+	Ativo       bool               `json:"ativo"`
+	CreatedAt   time.Time          `json:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type Insumo struct {
 	ID                 uuid.UUID          `json:"id"`
 	EmpresaID          uuid.UUID          `json:"empresa_id"`
@@ -122,6 +161,33 @@ type Loja struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type OrdemCompraIten struct {
+	ID                 uuid.UUID      `json:"id"`
+	OrdemCompraID      uuid.UUID      `json:"ordem_compra_id"`
+	InsumoID           uuid.UUID      `json:"insumo_id"`
+	Quantidade         pgtype.Numeric `json:"quantidade"`
+	UnidadeMedida      string         `json:"unidade_medida"`
+	PrecoUnitario      pgtype.Numeric `json:"preco_unitario"`
+	QuantidadeRecebida pgtype.Numeric `json:"quantidade_recebida"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
+type OrdensCompra struct {
+	ID                  uuid.UUID          `json:"id"`
+	EmpresaID           uuid.UUID          `json:"empresa_id"`
+	LojaID              uuid.UUID          `json:"loja_id"`
+	FornecedorID        uuid.UUID          `json:"fornecedor_id"`
+	DataCompra          pgtype.Date        `json:"data_compra"`
+	DataPrevistaEntrega pgtype.Date        `json:"data_prevista_entrega"`
+	Status              string             `json:"status"`
+	Observacoes         pgtype.Text        `json:"observacoes"`
+	ValorTotal          pgtype.Numeric     `json:"valor_total"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type Papei struct {
@@ -258,6 +324,27 @@ type ProdutosCanonico struct {
 	CreatedAt   time.Time          `json:"created_at"`
 	UpdatedAt   time.Time          `json:"updated_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type RecebimentoCompraIten struct {
+	ID                  uuid.UUID      `json:"id"`
+	RecebimentoCompraID uuid.UUID      `json:"recebimento_compra_id"`
+	OrdemCompraItemID   uuid.UUID      `json:"ordem_compra_item_id"`
+	InsumoID            uuid.UUID      `json:"insumo_id"`
+	QuantidadeRecebida  pgtype.Numeric `json:"quantidade_recebida"`
+	PrecoUnitario       pgtype.Numeric `json:"preco_unitario"`
+	CreatedAt           time.Time      `json:"created_at"`
+}
+
+type RecebimentosCompra struct {
+	ID                uuid.UUID   `json:"id"`
+	OrdemCompraID     uuid.UUID   `json:"ordem_compra_id"`
+	LojaID            uuid.UUID   `json:"loja_id"`
+	DataRecebimento   time.Time   `json:"data_recebimento"`
+	Observacoes       pgtype.Text `json:"observacoes"`
+	PermitirExcedente bool        `json:"permitir_excedente"`
+	CreatedAt         time.Time   `json:"created_at"`
+	UpdatedAt         time.Time   `json:"updated_at"`
 }
 
 type Usuario struct {

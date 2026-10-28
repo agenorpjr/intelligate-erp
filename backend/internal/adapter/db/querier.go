@@ -14,6 +14,7 @@ type Querier interface {
 	CreateAuditoria(ctx context.Context, arg CreateAuditoriaParams) (Auditorium, error)
 	// Categoria Canônica
 	CreateCategoriaCanonica(ctx context.Context, arg CreateCategoriaCanonicaParams) (CategoriasCanonica, error)
+	CreateContaPagar(ctx context.Context, arg CreateContaPagarParams) (ContasPagar, error)
 	CreateEmpresa(ctx context.Context, arg CreateEmpresaParams) (Empresa, error)
 	// Evento Ingestão
 	CreateEventoIngestao(ctx context.Context, arg CreateEventoIngestaoParams) (EventosIngestao, error)
@@ -21,11 +22,14 @@ type Querier interface {
 	CreateFichaTecnica(ctx context.Context, arg CreateFichaTecnicaParams) (FichasTecnica, error)
 	// Ficha Técnica Componentes
 	CreateFichaTecnicaComponente(ctx context.Context, arg CreateFichaTecnicaComponenteParams) (FichaTecnicaComponente, error)
+	CreateFornecedor(ctx context.Context, arg CreateFornecedorParams) (Fornecedore, error)
 	// Insumos
 	CreateInsumo(ctx context.Context, arg CreateInsumoParams) (Insumo, error)
 	// Insumo Custos (Histórico)
 	CreateInsumoCusto(ctx context.Context, arg CreateInsumoCustoParams) (InsumoCusto, error)
 	CreateLoja(ctx context.Context, arg CreateLojaParams) (Loja, error)
+	CreateOrdemCompra(ctx context.Context, arg CreateOrdemCompraParams) (OrdensCompra, error)
+	CreateOrdemCompraItem(ctx context.Context, arg CreateOrdemCompraItemParams) (OrdemCompraIten, error)
 	CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei, error)
 	CreatePapelPermissao(ctx context.Context, arg CreatePapelPermissaoParams) error
 	// PDV Integração
@@ -43,16 +47,23 @@ type Querier interface {
 	CreateProduto(ctx context.Context, arg CreateProdutoParams) (Produto, error)
 	// Produto Canônico
 	CreateProdutoCanonico(ctx context.Context, arg CreateProdutoCanonicoParams) (ProdutosCanonico, error)
+	CreateRecebimentoCompra(ctx context.Context, arg CreateRecebimentoCompraParams) (RecebimentosCompra, error)
+	CreateRecebimentoCompraItem(ctx context.Context, arg CreateRecebimentoCompraItemParams) (RecebimentoCompraIten, error)
 	CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (Usuario, error)
 	CreateUsuarioPapel(ctx context.Context, arg CreateUsuarioPapelParams) (UsuariosPapei, error)
 	DeleteCategoriaCanonica(ctx context.Context, id uuid.UUID) error
+	DeleteContaPagar(ctx context.Context, id uuid.UUID) error
 	DeleteEmpresa(ctx context.Context, id uuid.UUID) error
 	DeleteEventoIngestao(ctx context.Context, id uuid.UUID) error
 	DeleteFichaTecnica(ctx context.Context, id uuid.UUID) error
 	DeleteFichaTecnicaComponente(ctx context.Context, id uuid.UUID) error
 	DeleteFichaTecnicaComponentesByFicha(ctx context.Context, fichaTecnicaID uuid.UUID) error
+	DeleteFornecedor(ctx context.Context, id uuid.UUID) error
 	DeleteInsumo(ctx context.Context, id uuid.UUID) error
 	DeleteLoja(ctx context.Context, id uuid.UUID) error
+	DeleteOrdemCompra(ctx context.Context, id uuid.UUID) error
+	DeleteOrdemCompraItem(ctx context.Context, id uuid.UUID) error
+	DeleteOrdemCompraItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) error
 	DeletePapel(ctx context.Context, id uuid.UUID) error
 	DeletePapelPermissao(ctx context.Context, arg DeletePapelPermissaoParams) error
 	DeletePdvIntegracao(ctx context.Context, id uuid.UUID) error
@@ -70,6 +81,7 @@ type Querier interface {
 	// CMV Queries
 	GetCMVResumo(ctx context.Context, arg GetCMVResumoParams) (GetCMVResumoRow, error)
 	GetCategoriaCanonica(ctx context.Context, id uuid.UUID) (CategoriasCanonica, error)
+	GetContaPagar(ctx context.Context, id uuid.UUID) (ContasPagar, error)
 	GetEmpresa(ctx context.Context, id uuid.UUID) (Empresa, error)
 	GetEmpresaByCNPJ(ctx context.Context, cnpj string) (Empresa, error)
 	GetEventoIngestao(ctx context.Context, id uuid.UUID) (EventosIngestao, error)
@@ -77,6 +89,8 @@ type Querier interface {
 	GetFichaTecnica(ctx context.Context, id uuid.UUID) (FichasTecnica, error)
 	GetFichaTecnicaByProdutoLoja(ctx context.Context, arg GetFichaTecnicaByProdutoLojaParams) (FichasTecnica, error)
 	GetFichaTecnicaComponente(ctx context.Context, id uuid.UUID) (FichaTecnicaComponente, error)
+	GetFornecedor(ctx context.Context, id uuid.UUID) (Fornecedore, error)
+	GetFornecedorByCNPJCPF(ctx context.Context, arg GetFornecedorByCNPJCPFParams) (Fornecedore, error)
 	GetInsumo(ctx context.Context, id uuid.UUID) (Insumo, error)
 	GetInsumoByNome(ctx context.Context, arg GetInsumoByNomeParams) (Insumo, error)
 	GetInsumoCusto(ctx context.Context, id uuid.UUID) (InsumoCusto, error)
@@ -84,7 +98,11 @@ type Querier interface {
 	GetInsumoCustoAtual(ctx context.Context, insumoID uuid.UUID) (InsumoCusto, error)
 	// Get the cost valid at a specific date (most recent cost with data_vigencia <= target date)
 	GetInsumoCustoVigente(ctx context.Context, arg GetInsumoCustoVigenteParams) (InsumoCusto, error)
+	GetInsumoForUpdate(ctx context.Context, id uuid.UUID) (Insumo, error)
 	GetLoja(ctx context.Context, id uuid.UUID) (Loja, error)
+	GetOrdemCompra(ctx context.Context, id uuid.UUID) (OrdensCompra, error)
+	GetOrdemCompraItem(ctx context.Context, id uuid.UUID) (OrdemCompraIten, error)
+	GetOrdemCompraWithItens(ctx context.Context, id uuid.UUID) ([]GetOrdemCompraWithItensRow, error)
 	GetPapel(ctx context.Context, id uuid.UUID) (Papei, error)
 	GetPdvIntegracao(ctx context.Context, id uuid.UUID) (PdvIntegraco, error)
 	GetPdvIntegracaoByLojaProvedor(ctx context.Context, arg GetPdvIntegracaoByLojaProvedorParams) (PdvIntegraco, error)
@@ -101,6 +119,7 @@ type Querier interface {
 	GetProdutoCanonico(ctx context.Context, id uuid.UUID) (ProdutosCanonico, error)
 	GetProdutoCanonicoBySKU(ctx context.Context, arg GetProdutoCanonicoBySKUParams) (ProdutosCanonico, error)
 	GetProdutosSemFichaTecnica(ctx context.Context, arg GetProdutosSemFichaTecnicaParams) ([]GetProdutosSemFichaTecnicaRow, error)
+	GetRecebimentoCompra(ctx context.Context, id uuid.UUID) (RecebimentosCompra, error)
 	GetUsuario(ctx context.Context, id uuid.UUID) (Usuario, error)
 	GetUsuarioByEmail(ctx context.Context, email string) (Usuario, error)
 	GetUsuarioByEmailAndEmpresa(ctx context.Context, arg GetUsuarioByEmailAndEmpresaParams) (Usuario, error)
@@ -111,15 +130,25 @@ type Querier interface {
 	HealthCheck(ctx context.Context) (int32, error)
 	ListAuditoria(ctx context.Context, arg ListAuditoriaParams) ([]Auditorium, error)
 	ListCategoriasCanonicasByEmpresa(ctx context.Context, arg ListCategoriasCanonicasByEmpresaParams) ([]CategoriasCanonica, error)
+	ListContasPagarByEmpresa(ctx context.Context, arg ListContasPagarByEmpresaParams) ([]ContasPagar, error)
+	ListContasPagarByFilter(ctx context.Context, arg ListContasPagarByFilterParams) ([]ContasPagar, error)
+	ListContasPagarByFornecedor(ctx context.Context, arg ListContasPagarByFornecedorParams) ([]ContasPagar, error)
+	ListContasPagarByStatus(ctx context.Context, arg ListContasPagarByStatusParams) ([]ContasPagar, error)
 	ListEmpresas(ctx context.Context, arg ListEmpresasParams) ([]Empresa, error)
 	ListEventosIngestao(ctx context.Context, arg ListEventosIngestaoParams) ([]EventosIngestao, error)
 	ListFichaTecnicaComponentes(ctx context.Context, fichaTecnicaID uuid.UUID) ([]ListFichaTecnicaComponentesRow, error)
 	ListFichasTecnicasByEmpresa(ctx context.Context, arg ListFichasTecnicasByEmpresaParams) ([]FichasTecnica, error)
 	ListFichasTecnicasByLoja(ctx context.Context, arg ListFichasTecnicasByLojaParams) ([]FichasTecnica, error)
 	ListFichasTecnicasByProduto(ctx context.Context, arg ListFichasTecnicasByProdutoParams) ([]FichasTecnica, error)
+	ListFornecedoresByEmpresa(ctx context.Context, arg ListFornecedoresByEmpresaParams) ([]Fornecedore, error)
+	ListFornecedoresByFilter(ctx context.Context, arg ListFornecedoresByFilterParams) ([]Fornecedore, error)
 	ListInsumoCustosByInsumo(ctx context.Context, arg ListInsumoCustosByInsumoParams) ([]InsumoCusto, error)
 	ListInsumosByEmpresa(ctx context.Context, arg ListInsumosByEmpresaParams) ([]Insumo, error)
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
+	ListOrdemCompraItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]OrdemCompraIten, error)
+	ListOrdensCompraByEmpresa(ctx context.Context, arg ListOrdensCompraByEmpresaParams) ([]OrdensCompra, error)
+	ListOrdensCompraByFilter(ctx context.Context, arg ListOrdensCompraByFilterParams) ([]OrdensCompra, error)
+	ListOrdensCompraByLoja(ctx context.Context, arg ListOrdensCompraByLojaParams) ([]OrdensCompra, error)
 	ListPapeisByEmpresa(ctx context.Context, arg ListPapeisByEmpresaParams) ([]Papei, error)
 	ListPdvIntegracoesByEmpresa(ctx context.Context, arg ListPdvIntegracoesByEmpresaParams) ([]PdvIntegraco, error)
 	ListPdvsOrigemByEmpresa(ctx context.Context, arg ListPdvsOrigemByEmpresaParams) ([]PdvsOrigem, error)
@@ -131,15 +160,26 @@ type Querier interface {
 	ListPermissoesByUsuario(ctx context.Context, arg ListPermissoesByUsuarioParams) ([]Permisso, error)
 	ListProdutosByEmpresa(ctx context.Context, arg ListProdutosByEmpresaParams) ([]Produto, error)
 	ListProdutosCanonicosByEmpresa(ctx context.Context, arg ListProdutosCanonicosByEmpresaParams) ([]ProdutosCanonico, error)
+	ListRecebimentoCompraItensByRecebimento(ctx context.Context, recebimentoCompraID uuid.UUID) ([]RecebimentoCompraIten, error)
+	ListRecebimentosCompraByFilter(ctx context.Context, arg ListRecebimentosCompraByFilterParams) ([]RecebimentosCompra, error)
+	ListRecebimentosCompraByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]RecebimentosCompra, error)
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
 	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
+	UpdateContaPagar(ctx context.Context, arg UpdateContaPagarParams) (ContasPagar, error)
+	UpdateContaPagarStatus(ctx context.Context, arg UpdateContaPagarStatusParams) (ContasPagar, error)
 	UpdateEmpresa(ctx context.Context, arg UpdateEmpresaParams) (Empresa, error)
 	UpdateEventoIngestao(ctx context.Context, arg UpdateEventoIngestaoParams) (EventosIngestao, error)
 	UpdateFichaTecnica(ctx context.Context, arg UpdateFichaTecnicaParams) (FichasTecnica, error)
 	UpdateFichaTecnicaComponente(ctx context.Context, arg UpdateFichaTecnicaComponenteParams) (FichaTecnicaComponente, error)
+	UpdateFornecedor(ctx context.Context, arg UpdateFornecedorParams) (Fornecedore, error)
 	UpdateInsumo(ctx context.Context, arg UpdateInsumoParams) (Insumo, error)
+	UpdateInsumoCustoUnitario(ctx context.Context, arg UpdateInsumoCustoUnitarioParams) (Insumo, error)
 	UpdateLoja(ctx context.Context, arg UpdateLojaParams) (Loja, error)
+	UpdateOrdemCompra(ctx context.Context, arg UpdateOrdemCompraParams) (OrdensCompra, error)
+	UpdateOrdemCompraItem(ctx context.Context, arg UpdateOrdemCompraItemParams) (OrdemCompraIten, error)
+	UpdateOrdemCompraItemQuantidadeRecebida(ctx context.Context, arg UpdateOrdemCompraItemQuantidadeRecebidaParams) (OrdemCompraIten, error)
+	UpdateOrdemCompraStatus(ctx context.Context, arg UpdateOrdemCompraStatusParams) (OrdensCompra, error)
 	UpdatePapel(ctx context.Context, arg UpdatePapelParams) (Papei, error)
 	UpdatePdvIntegracao(ctx context.Context, arg UpdatePdvIntegracaoParams) (PdvIntegraco, error)
 	UpdatePdvIntegracaoUltimaSincronizacao(ctx context.Context, arg UpdatePdvIntegracaoUltimaSincronizacaoParams) (PdvIntegraco, error)

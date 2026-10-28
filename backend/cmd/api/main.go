@@ -64,6 +64,12 @@ func main() {
 	produtoRepo := db.NewProdutoRepository(dbpool)
 	fichaTecnicaRepo := db.NewFichaTecnicaRepository(dbpool)
 
+	// Compras repositories
+	fornecedorRepo := db.NewFornecedorRepository(dbpool)
+	ordemCompraRepo := db.NewOrdemCompraRepository(dbpool)
+	recebimentoRepo := db.NewRecebimentoCompraRepository(dbpool)
+	contaPagarRepo := db.NewContaPagarRepository(dbpool)
+
 	// Initialize crypto service
 	cryptoService, err := crypto.NewCryptoServiceFromEnv()
 	if err != nil {
@@ -102,6 +108,12 @@ func main() {
 		auditoriaRepo,
 	)
 
+	// Compras usecases
+	fornecedorUsecase := usecase.NewFornecedorUsecase(fornecedorRepo, auditoriaRepo)
+	ordemCompraUsecase := usecase.NewOrdemCompraUsecase(ordemCompraRepo, fornecedorRepo, insumoRepo, auditoriaRepo)
+	recebimentoCompraUsecase := usecase.NewRecebimentoCompraUsecase(recebimentoRepo, ordemCompraRepo, fornecedorRepo, insumoRepo, contaPagarRepo, auditoriaRepo)
+	contaPagarUsecase := usecase.NewContaPagarUsecase(contaPagarRepo, auditoriaRepo)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
@@ -112,6 +124,12 @@ func main() {
 	cmvHandler := httpadapter.NewCMVHandler(fichaTecnicaUsecase)
 	pdvIntegracaoHandler := httpadapter.NewPdvIntegracaoHandler(pdvIntegracaoUsecase)
 	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
+
+	// Compras handlers
+	fornecedorHandler := httpadapter.NewFornecedorHandler(fornecedorUsecase)
+	ordemCompraHandler := httpadapter.NewOrdemCompraHandler(ordemCompraUsecase)
+	recebimentoCompraHandler := httpadapter.NewRecebimentoCompraHandler(recebimentoCompraUsecase)
+	contaPagarHandler := httpadapter.NewContaPagarHandler(contaPagarUsecase)
 
 	// Create router
 	r := chi.NewRouter()
@@ -186,6 +204,40 @@ func main() {
 			r.Put("/integracoes/{id}", pdvIntegracaoHandler.Atualizar)
 			r.Delete("/integracoes/{id}", pdvIntegracaoHandler.Deletar)
 			r.Post("/integracoes/{id}/sincronizar", pdvIntegracaoHandler.Sincronizar)
+
+			// Compras - Fornecedores
+			r.Post("/fornecedores", fornecedorHandler.Create)
+			r.Get("/fornecedores", fornecedorHandler.List)
+			r.Get("/fornecedores/{id}", fornecedorHandler.GetByID)
+			r.Put("/fornecedores/{id}", fornecedorHandler.Update)
+			r.Delete("/fornecedores/{id}", fornecedorHandler.Delete)
+
+			// Compras - Ordens de Compra
+			r.Post("/ordens-compra", ordemCompraHandler.Create)
+			r.Get("/ordens-compra", ordemCompraHandler.List)
+			r.Get("/ordens-compra/{id}", ordemCompraHandler.GetByID)
+			r.Put("/ordens-compra/{id}", ordemCompraHandler.Update)
+			r.Delete("/ordens-compra/{id}", ordemCompraHandler.Cancel)
+			r.Post("/ordens-compra/{id}/itens", ordemCompraHandler.AddItem)
+			r.Put("/ordens-compra/itens/{item_id}", ordemCompraHandler.UpdateItem)
+			r.Delete("/ordens-compra/itens/{item_id}", ordemCompraHandler.RemoveItem)
+			r.Get("/lojas/{loja_id}/ordens-compra", ordemCompraHandler.ListByLoja)
+
+			// Compras - Recebimentos
+			r.Post("/recebimentos-compra", recebimentoCompraHandler.Create)
+			r.Get("/recebimentos-compra/{id}", recebimentoCompraHandler.GetByID)
+			r.Get("/ordens-compra/{ordem_compra_id}/recebimentos", recebimentoCompraHandler.ListByOrdemCompra)
+			r.Get("/recebimentos-compra", recebimentoCompraHandler.ListByFilter)
+
+			// Compras - Contas a Pagar
+			r.Post("/contas-pagar", contaPagarHandler.Create)
+			r.Get("/contas-pagar", contaPagarHandler.List)
+			r.Get("/contas-pagar/{id}", contaPagarHandler.GetByID)
+			r.Put("/contas-pagar/{id}", contaPagarHandler.Update)
+			r.Post("/contas-pagar/{id}/pagar", contaPagarHandler.Pagar)
+			r.Delete("/contas-pagar/{id}", contaPagarHandler.Delete)
+			r.Get("/contas-pagar/fornecedores/{fornecedor_id}", contaPagarHandler.ListByFornecedor)
+			r.Get("/contas-pagar/status", contaPagarHandler.ListByStatus)
 		})
 	})
 

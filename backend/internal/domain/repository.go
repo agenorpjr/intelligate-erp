@@ -159,6 +159,8 @@ type InsumoRepository interface {
 	GetCustoVigente(ctx context.Context, insumoID uuid.UUID, dataVigencia time.Time) (*InsumoCusto, error)
 	GetCustoAtual(ctx context.Context, insumoID uuid.UUID) (*InsumoCusto, error)
 	ListCustosByInsumo(ctx context.Context, insumoID uuid.UUID, limit, offset int) ([]*InsumoCusto, error)
+	GetForUpdate(ctx context.Context, id uuid.UUID) (*Insumo, error)
+	UpdateCustoUnitario(ctx context.Context, id uuid.UUID, custoUnitario float64) error
 }
 
 type ProdutoRepository interface {
@@ -197,5 +199,56 @@ type PdvIntegracaoRepository interface {
 	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, filter PdvIntegracaoFilter) ([]*PdvIntegracao, error)
 	Update(ctx context.Context, p *PdvIntegracao) error
 	UpdateUltimaSincronizacao(ctx context.Context, id uuid.UUID, ultimaSincronizacao time.Time) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// Compras domain repositories
+type FornecedorRepository interface {
+	Create(ctx context.Context, f *Fornecedor) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Fornecedor, error)
+	GetByCNPJCPF(ctx context.Context, empresaID uuid.UUID, cnpjCpf string) (*Fornecedor, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, ativo *bool, limit, offset int) ([]*Fornecedor, error)
+	ListByFilter(ctx context.Context, empresaID uuid.UUID, ativo *bool, nome, cnpjCpf *string, limit, offset int) ([]*Fornecedor, error)
+	Update(ctx context.Context, f *Fornecedor) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type OrdemCompraRepository interface {
+	Create(ctx context.Context, oc *OrdemCompra) error
+	GetByID(ctx context.Context, id uuid.UUID) (*OrdemCompra, error)
+	GetWithItens(ctx context.Context, id uuid.UUID) (*OrdemCompra, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*OrdemCompra, error)
+	ListByLoja(ctx context.Context, lojaID uuid.UUID, limit, offset int) ([]*OrdemCompra, error)
+	ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *OrdemCompraStatus, dataInicio, dataFim *time.Time, limit, offset int) ([]*OrdemCompra, error)
+	Update(ctx context.Context, oc *OrdemCompra) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status OrdemCompraStatus) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	CreateItem(ctx context.Context, item *OrdemCompraItem) error
+	GetItem(ctx context.Context, id uuid.UUID) (*OrdemCompraItem, error)
+	ListItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]*OrdemCompraItem, error)
+	UpdateItem(ctx context.Context, item *OrdemCompraItem) error
+	UpdateItemQuantidadeRecebida(ctx context.Context, itemID uuid.UUID, quantidadeRecebida float64) error
+	DeleteItem(ctx context.Context, id uuid.UUID) error
+	DeleteItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) error
+}
+
+type RecebimentoCompraRepository interface {
+	Create(ctx context.Context, rc *RecebimentoCompra) error
+	GetByID(ctx context.Context, id uuid.UUID) (*RecebimentoCompra, error)
+	ListByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]*RecebimentoCompra, error)
+	ListByFilter(ctx context.Context, ordemCompraID, lojaID *uuid.UUID, dataInicio, dataFim *time.Time, limit, offset int) ([]*RecebimentoCompra, error)
+	CreateItem(ctx context.Context, item *RecebimentoCompraItem) error
+	ListItensByRecebimento(ctx context.Context, recebimentoID uuid.UUID) ([]*RecebimentoCompraItem, error)
+}
+
+type ContaPagarRepository interface {
+	Create(ctx context.Context, cp *ContaPagar) error
+	GetByID(ctx context.Context, id uuid.UUID) (*ContaPagar, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*ContaPagar, error)
+	ListByFornecedor(ctx context.Context, fornecedorID uuid.UUID, limit, offset int) ([]*ContaPagar, error)
+	ListByStatus(ctx context.Context, empresaID uuid.UUID, status ContaPagarStatus, limit, offset int) ([]*ContaPagar, error)
+	ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, limit, offset int) ([]*ContaPagar, error)
+	Update(ctx context.Context, cp *ContaPagar) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status ContaPagarStatus, dataPagamento *time.Time, formaPagamento *string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
