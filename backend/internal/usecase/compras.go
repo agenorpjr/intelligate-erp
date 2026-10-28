@@ -580,6 +580,7 @@ type RecebimentoCompraUsecase struct {
 	insumoRepo      domain.InsumoRepository
 	contaPagarRepo  domain.ContaPagarRepository
 	auditoriaRepo   domain.AuditoriaRepository
+	estoqueUsecase  *EstoqueUsecase
 }
 
 func NewRecebimentoCompraUsecase(
@@ -589,6 +590,7 @@ func NewRecebimentoCompraUsecase(
 	insumoRepo domain.InsumoRepository,
 	contaPagarRepo domain.ContaPagarRepository,
 	auditoriaRepo domain.AuditoriaRepository,
+	estoqueUsecase *EstoqueUsecase,
 ) *RecebimentoCompraUsecase {
 	return &RecebimentoCompraUsecase{
 		recebimentoRepo: recebimentoRepo,
@@ -597,6 +599,7 @@ func NewRecebimentoCompraUsecase(
 		insumoRepo:      insumoRepo,
 		contaPagarRepo:  contaPagarRepo,
 		auditoriaRepo:   auditoriaRepo,
+		estoqueUsecase:  estoqueUsecase,
 	}
 }
 
@@ -714,6 +717,29 @@ func (uc *RecebimentoCompraUsecase) Create(ctx context.Context, input domain.Cre
 		}
 		if err := uc.insumoRepo.CreateCusto(ctx, custo); err != nil {
 			return nil, err
+		}
+
+		// Registra a entrada de estoque correspondente (movimentação entrada_compra),
+		// atualizando saldo e custo médio móvel do insumo na loja.
+		if uc.estoqueUsecase != nil {
+			unidade := ""
+			if ordemItem != nil {
+				unidade = ordemItem.UnidadeMedida
+			}
+			referencia := recebimento.ID.String()
+			if _, err := uc.estoqueUsecase.RegistrarEntradaCompra(ctx, domain.RegistrarEntradaCompraInput{
+				EmpresaID:         ordemCompra.EmpresaID,
+				LojaID:            input.LojaID,
+				InsumoID:          itemInput.InsumoID,
+				Quantidade:        itemInput.QuantidadeRecebida,
+				CustoUnitario:     itemInput.PrecoUnitario,
+				UnidadeMedida:     unidade,
+				ReferenciaExterna: &referencia,
+				Observacao:        stringPtr("Entrada automática de recebimento de compra"),
+				UsuarioID:         &usuarioID,
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 

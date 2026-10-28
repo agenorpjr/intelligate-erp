@@ -39,6 +39,7 @@ type Querier interface {
 	// Movimentações de Caixa
 	// ============================================================
 	CreateMovimentacaoCaixa(ctx context.Context, arg CreateMovimentacaoCaixaParams) (MovimentacoesCaixa, error)
+	CreateMovimentacaoEstoque(ctx context.Context, arg CreateMovimentacaoEstoqueParams) (CreateMovimentacaoEstoqueRow, error)
 	CreateOrdemCompra(ctx context.Context, arg CreateOrdemCompraParams) (OrdensCompra, error)
 	CreateOrdemCompraItem(ctx context.Context, arg CreateOrdemCompraItemParams) (OrdemCompraIten, error)
 	CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei, error)
@@ -136,6 +137,14 @@ type Querier interface {
 	GetDashboardVendasResumoPeriodoAnterior(ctx context.Context, arg GetDashboardVendasResumoPeriodoAnteriorParams) (GetDashboardVendasResumoPeriodoAnteriorRow, error)
 	GetEmpresa(ctx context.Context, id uuid.UUID) (Empresa, error)
 	GetEmpresaByCNPJ(ctx context.Context, cnpj string) (Empresa, error)
+	// ============================================================
+	// Estoque e Movimentações de Insumos (Etapa 12)
+	// ============================================================
+	// Estoque operacional/gerencial por insumo e loja.
+	// Colunas NUMERIC são convertidas para float8 na leitura para que o
+	// sqlc gere tipos float64 (mesmo padrão do dashboard).
+	GetEstoqueSaldo(ctx context.Context, arg GetEstoqueSaldoParams) (GetEstoqueSaldoRow, error)
+	GetEstoqueSaldoForUpdate(ctx context.Context, arg GetEstoqueSaldoForUpdateParams) (GetEstoqueSaldoForUpdateRow, error)
 	GetEventoIngestao(ctx context.Context, id uuid.UUID) (EventosIngestao, error)
 	GetEventoIngestaoByIdempotencyKey(ctx context.Context, arg GetEventoIngestaoByIdempotencyKeyParams) (EventosIngestao, error)
 	GetFichaTecnica(ctx context.Context, id uuid.UUID) (FichasTecnica, error)
@@ -178,6 +187,7 @@ type Querier interface {
 	GetProdutoCanonicoBySKU(ctx context.Context, arg GetProdutoCanonicoBySKUParams) (ProdutosCanonico, error)
 	GetProdutosSemFichaTecnica(ctx context.Context, arg GetProdutosSemFichaTecnicaParams) ([]GetProdutosSemFichaTecnicaRow, error)
 	GetRecebimentoCompra(ctx context.Context, id uuid.UUID) (RecebimentosCompra, error)
+	GetResumoPerdasEstoque(ctx context.Context, arg GetResumoPerdasEstoqueParams) ([]GetResumoPerdasEstoqueRow, error)
 	GetSaldoPeriodo(ctx context.Context, arg GetSaldoPeriodoParams) (interface{}, error)
 	GetTotaisPorCategoriaFinanceira(ctx context.Context, arg GetTotaisPorCategoriaFinanceiraParams) ([]GetTotaisPorCategoriaFinanceiraRow, error)
 	GetTotaisPorContaGerencial(ctx context.Context, arg GetTotaisPorContaGerencialParams) ([]GetTotaisPorContaGerencialRow, error)
@@ -199,6 +209,7 @@ type Querier interface {
 	ListContasPagarByFornecedor(ctx context.Context, arg ListContasPagarByFornecedorParams) ([]ContasPagar, error)
 	ListContasPagarByStatus(ctx context.Context, arg ListContasPagarByStatusParams) ([]ContasPagar, error)
 	ListEmpresas(ctx context.Context, arg ListEmpresasParams) ([]Empresa, error)
+	ListEstoquesSaldos(ctx context.Context, arg ListEstoquesSaldosParams) ([]ListEstoquesSaldosRow, error)
 	ListEventosIngestao(ctx context.Context, arg ListEventosIngestaoParams) ([]EventosIngestao, error)
 	ListFichaTecnicaComponentes(ctx context.Context, fichaTecnicaID uuid.UUID) ([]ListFichaTecnicaComponentesRow, error)
 	ListFichasTecnicasByEmpresa(ctx context.Context, arg ListFichasTecnicasByEmpresaParams) ([]FichasTecnica, error)
@@ -211,6 +222,7 @@ type Querier interface {
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
 	ListMovimentacoesCaixaByEmpresa(ctx context.Context, arg ListMovimentacoesCaixaByEmpresaParams) ([]MovimentacoesCaixa, error)
 	ListMovimentacoesCaixaByLoja(ctx context.Context, arg ListMovimentacoesCaixaByLojaParams) ([]MovimentacoesCaixa, error)
+	ListMovimentacoesEstoque(ctx context.Context, arg ListMovimentacoesEstoqueParams) ([]ListMovimentacoesEstoqueRow, error)
 	ListOrdemCompraItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]OrdemCompraIten, error)
 	ListOrdensCompraByEmpresa(ctx context.Context, arg ListOrdensCompraByEmpresaParams) ([]OrdensCompra, error)
 	ListOrdensCompraByFilter(ctx context.Context, arg ListOrdensCompraByFilterParams) ([]OrdensCompra, error)
@@ -261,6 +273,7 @@ type Querier interface {
 	UpdateUsuario(ctx context.Context, arg UpdateUsuarioParams) (Usuario, error)
 	UpdateUsuarioSenha(ctx context.Context, arg UpdateUsuarioSenhaParams) error
 	UpdateUsuarioUltimoLogin(ctx context.Context, id uuid.UUID) error
+	UpsertEstoqueSaldo(ctx context.Context, arg UpsertEstoqueSaldoParams) (UpsertEstoqueSaldoRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

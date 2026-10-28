@@ -78,6 +78,9 @@ func main() {
 	// Dashboard (Etapa 11) repository
 	dashboardRepo := db.NewDashboardRepository(dbpool)
 
+	// Estoque (Etapa 12) repository
+	estoqueRepo := db.NewEstoqueRepository(dbpool)
+
 	// Initialize crypto service
 	cryptoService, err := crypto.NewCryptoServiceFromEnv()
 	if err != nil {
@@ -116,10 +119,13 @@ func main() {
 		auditoriaRepo,
 	)
 
+	// Estoque (Etapa 12) usecase
+	estoqueUsecase := usecase.NewEstoqueUsecase(estoqueRepo, lojaRepo, insumoRepo, auditoriaRepo)
+
 	// Compras usecases
 	fornecedorUsecase := usecase.NewFornecedorUsecase(fornecedorRepo, auditoriaRepo)
 	ordemCompraUsecase := usecase.NewOrdemCompraUsecase(ordemCompraRepo, fornecedorRepo, insumoRepo, auditoriaRepo)
-	recebimentoCompraUsecase := usecase.NewRecebimentoCompraUsecase(recebimentoRepo, ordemCompraRepo, fornecedorRepo, insumoRepo, contaPagarRepo, auditoriaRepo)
+	recebimentoCompraUsecase := usecase.NewRecebimentoCompraUsecase(recebimentoRepo, ordemCompraRepo, fornecedorRepo, insumoRepo, contaPagarRepo, auditoriaRepo, estoqueUsecase)
 	contaPagarUsecase := usecase.NewContaPagarUsecase(contaPagarRepo, auditoriaRepo)
 
 	// Financeiro (Etapa 10) usecases
@@ -158,6 +164,9 @@ func main() {
 
 	// Dashboard (Etapa 11) handler
 	dashboardHandler := httpadapter.NewDashboardHandler(dashboardUsecase)
+
+	// Estoque (Etapa 12) handler
+	estoqueHandler := httpadapter.NewEstoqueHandler(estoqueUsecase)
 
 	// Create router
 	r := chi.NewRouter()
@@ -297,6 +306,15 @@ func main() {
 
 			// Dashboard (Etapa 11) - Indicadores por loja e período
 			r.Get("/dashboard", dashboardHandler.GetDashboard)
+
+			// Estoque (Etapa 12) - Saldos e movimentações
+			r.Get("/estoque/saldos", estoqueHandler.ListSaldos)
+			r.Get("/estoque/saldos/{insumo_id}", estoqueHandler.GetSaldo)
+			r.Post("/estoque/saidas", estoqueHandler.RegistrarSaida)
+			r.Post("/estoque/ajustes", estoqueHandler.RegistrarAjuste)
+			r.Post("/estoque/transferencias", estoqueHandler.Transferir)
+			r.Get("/estoque/movimentacoes", estoqueHandler.ListMovimentacoes)
+			r.Get("/estoque/perdas", estoqueHandler.GetResumoPerdas)
 		})
 	})
 

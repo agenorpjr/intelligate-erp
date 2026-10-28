@@ -298,3 +298,22 @@ type FluxoCaixaRepository interface {
 type DashboardRepository interface {
 	GetDashboard(ctx context.Context, req DashboardRequest) (*DashboardResponse, error)
 }
+
+// Estoque domain repositories (Etapa 12)
+//
+// EstoqueTxRepository agrupa as operações executadas dentro de uma transação.
+// Toda movimentação de estoque deve ser criada por meio deste contrato.
+type EstoqueTxRepository interface {
+	GetSaldoForUpdate(ctx context.Context, insumoID, lojaID uuid.UUID) (*SaldoEstoque, error)
+	UpsertSaldo(ctx context.Context, saldo *SaldoEstoque) (*SaldoEstoque, error)
+	CreateMovimentacao(ctx context.Context, mov *MovimentacaoEstoque) (*MovimentacaoEstoque, error)
+}
+
+// EstoqueRepository fornece acesso ao estoque e às movimentações.
+type EstoqueRepository interface {
+	GetSaldo(ctx context.Context, insumoID, lojaID uuid.UUID) (*SaldoEstoque, error)
+	ListSaldos(ctx context.Context, filter SaldoEstoqueFilter) ([]*SaldoEstoque, error)
+	ListMovimentacoes(ctx context.Context, filter MovimentacaoEstoqueFilter) ([]*MovimentacaoEstoque, error)
+	GetResumoPerdas(ctx context.Context, filter ResumoPerdasFilter) (*ResumoPerdas, error)
+	WithTx(ctx context.Context, fn func(tx EstoqueTxRepository) error) error
+}

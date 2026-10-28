@@ -98,6 +98,19 @@ type Empresa struct {
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type Estoque struct {
+	ID                 uuid.UUID      `json:"id"`
+	EmpresaID          uuid.UUID      `json:"empresa_id"`
+	LojaID             uuid.UUID      `json:"loja_id"`
+	InsumoID           uuid.UUID      `json:"insumo_id"`
+	Quantidade         pgtype.Numeric `json:"quantidade"`
+	UnidadeMedida      string         `json:"unidade_medida"`
+	CustoMedioUnitario pgtype.Numeric `json:"custo_medio_unitario"`
+	PermiteNegativo    bool           `json:"permite_negativo"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
 type EventosIngestao struct {
 	ID              uuid.UUID          `json:"id"`
 	EmpresaID       uuid.UUID          `json:"empresa_id"`
@@ -207,6 +220,26 @@ type MovimentacoesCaixa struct {
 	CreatedAt             time.Time          `json:"created_at"`
 	UpdatedAt             time.Time          `json:"updated_at"`
 	DeletedAt             pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type MovimentacoesEstoque struct {
+	ID                uuid.UUID      `json:"id"`
+	EmpresaID         uuid.UUID      `json:"empresa_id"`
+	LojaID            uuid.UUID      `json:"loja_id"`
+	InsumoID          uuid.UUID      `json:"insumo_id"`
+	Tipo              string         `json:"tipo"`
+	Quantidade        pgtype.Numeric `json:"quantidade"`
+	UnidadeMedida     string         `json:"unidade_medida"`
+	CustoUnitario     pgtype.Numeric `json:"custo_unitario"`
+	CustoTotal        pgtype.Numeric `json:"custo_total"`
+	SaldoAnterior     pgtype.Numeric `json:"saldo_anterior"`
+	SaldoPosterior    pgtype.Numeric `json:"saldo_posterior"`
+	Motivo            pgtype.Text    `json:"motivo"`
+	Observacao        pgtype.Text    `json:"observacao"`
+	Origem            string         `json:"origem"`
+	ReferenciaExterna pgtype.Text    `json:"referencia_externa"`
+	UsuarioID         pgtype.UUID    `json:"usuario_id"`
+	CreatedAt         time.Time      `json:"created_at"`
 }
 
 type OrdemCompraIten struct {
