@@ -187,33 +187,33 @@ INSERT INTO contas_pagar (
 ) RETURNING id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at;
 
 -- name: GetContaPagar :one
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListContasPagarByEmpresa :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
 LIMIT $2 OFFSET $3;
 
 -- name: ListContasPagarByFornecedor :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE fornecedor_id = $1 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
 LIMIT $2 OFFSET $3;
 
 -- name: ListContasPagarByStatus :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1 AND status = $2 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
 LIMIT $3 OFFSET $4;
 
 -- name: ListContasPagarByFilter :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1
   AND deleted_at IS NULL
@@ -224,8 +224,10 @@ WHERE empresa_id = $1
   AND ($6::date IS NULL OR data_vencimento <= $6)
   AND ($7::date IS NULL OR data_pagamento >= $7)
   AND ($8::date IS NULL OR data_pagamento <= $8)
+  AND ($9::uuid IS NULL OR categoria_financeira_id = $9)
+  AND ($10::uuid IS NULL OR conta_gerencial_id = $10)
 ORDER BY data_vencimento, created_at
-LIMIT $9 OFFSET $10;
+LIMIT $11 OFFSET $12;
 
 -- name: UpdateContaPagar :one
 UPDATE contas_pagar

@@ -70,6 +70,11 @@ func main() {
 	recebimentoRepo := db.NewRecebimentoCompraRepository(dbpool)
 	contaPagarRepo := db.NewContaPagarRepository(dbpool)
 
+	// Financeiro (Etapa 10) repositories
+	contaGerencialRepo := db.NewContaGerencialRepository(dbpool)
+	categoriaFinanceiraRepo := db.NewCategoriaFinanceiraRepository(dbpool)
+	movimentacaoCaixaRepo := db.NewMovimentacaoCaixaRepository(dbpool)
+
 	// Initialize crypto service
 	cryptoService, err := crypto.NewCryptoServiceFromEnv()
 	if err != nil {
@@ -114,6 +119,13 @@ func main() {
 	recebimentoCompraUsecase := usecase.NewRecebimentoCompraUsecase(recebimentoRepo, ordemCompraRepo, fornecedorRepo, insumoRepo, contaPagarRepo, auditoriaRepo)
 	contaPagarUsecase := usecase.NewContaPagarUsecase(contaPagarRepo, auditoriaRepo)
 
+	// Financeiro (Etapa 10) usecases
+	contaGerencialUsecase := usecase.NewContaGerencialUsecase(contaGerencialRepo, auditoriaRepo)
+	categoriaFinanceiraUsecase := usecase.NewCategoriaFinanceiraUsecase(categoriaFinanceiraRepo, contaGerencialRepo, auditoriaRepo)
+	movimentacaoCaixaUsecase := usecase.NewMovimentacaoCaixaUsecase(movimentacaoCaixaRepo, lojaRepo, categoriaFinanceiraRepo, contaGerencialRepo, auditoriaRepo)
+	dreUsecase := usecase.NewDREGerencialUsecase(movimentacaoCaixaRepo, contaGerencialRepo)
+	fluxoCaixaUsecase := usecase.NewFluxoCaixaUsecase(movimentacaoCaixaRepo, contaGerencialRepo, lojaRepo)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
@@ -130,6 +142,13 @@ func main() {
 	ordemCompraHandler := httpadapter.NewOrdemCompraHandler(ordemCompraUsecase)
 	recebimentoCompraHandler := httpadapter.NewRecebimentoCompraHandler(recebimentoCompraUsecase)
 	contaPagarHandler := httpadapter.NewContaPagarHandler(contaPagarUsecase)
+
+	// Financeiro (Etapa 10) handlers
+	contaGerencialHandler := httpadapter.NewContaGerencialHandler(contaGerencialUsecase)
+	categoriaFinanceiraHandler := httpadapter.NewCategoriaFinanceiraHandler(categoriaFinanceiraUsecase)
+	movimentacaoCaixaHandler := httpadapter.NewMovimentacaoCaixaHandler(movimentacaoCaixaUsecase)
+	dreHandler := httpadapter.NewDREGerencialHandler(dreUsecase)
+	fluxoCaixaHandler := httpadapter.NewFluxoCaixaHandler(fluxoCaixaUsecase)
 
 	// Create router
 	r := chi.NewRouter()
@@ -238,6 +257,34 @@ func main() {
 			r.Delete("/contas-pagar/{id}", contaPagarHandler.Delete)
 			r.Get("/contas-pagar/fornecedores/{fornecedor_id}", contaPagarHandler.ListByFornecedor)
 			r.Get("/contas-pagar/status", contaPagarHandler.ListByStatus)
+
+			// Financeiro (Etapa 10) - Plano de Contas Gerencial
+			r.Post("/contas-gerenciais", contaGerencialHandler.Create)
+			r.Get("/contas-gerenciais", contaGerencialHandler.List)
+			r.Get("/contas-gerenciais/hierarquia", contaGerencialHandler.ListWithHierarchy)
+			r.Get("/contas-gerenciais/{id}", contaGerencialHandler.GetByID)
+			r.Put("/contas-gerenciais/{id}", contaGerencialHandler.Update)
+			r.Delete("/contas-gerenciais/{id}", contaGerencialHandler.Delete)
+
+			// Financeiro (Etapa 10) - Categorias Financeiras
+			r.Post("/categorias-financeiras", categoriaFinanceiraHandler.Create)
+			r.Get("/categorias-financeiras", categoriaFinanceiraHandler.List)
+			r.Get("/categorias-financeiras/{id}", categoriaFinanceiraHandler.GetByID)
+			r.Put("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Update)
+			r.Delete("/categorias-financeiras/{id}", categoriaFinanceiraHandler.Delete)
+
+			// Financeiro (Etapa 10) - Movimentações de Caixa
+			r.Post("/movimentacoes-caixa", movimentacaoCaixaHandler.Create)
+			r.Get("/movimentacoes-caixa", movimentacaoCaixaHandler.List)
+			r.Get("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.GetByID)
+			r.Put("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Update)
+			r.Delete("/movimentacoes-caixa/{id}", movimentacaoCaixaHandler.Delete)
+
+			// Financeiro (Etapa 10) - DRE Gerencial
+			r.Get("/dre", dreHandler.GetDRE)
+
+			// Financeiro (Etapa 10) - Fluxo de Caixa
+			r.Get("/fluxo-caixa", fluxoCaixaHandler.GetFluxoCaixa)
 		})
 	})
 

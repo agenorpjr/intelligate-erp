@@ -1192,7 +1192,20 @@ func (h *ContaPagarHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	contas, err := h.contaPagarUsecase.ListByFilter(r.Context(), empresaID, lojaID, fornecedorID, (*domain.ContaPagarStatus)(status), dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim, limit, offset)
+	// Parse categoria_financeira_id and conta_gerencial_id filters
+	var categoriaFinanceiraID, contaGerencialID *uuid.UUID
+	if catFinStr := r.URL.Query().Get("categoria_financeira_id"); catFinStr != "" {
+		if id, err := uuid.Parse(catFinStr); err == nil {
+			categoriaFinanceiraID = &id
+		}
+	}
+	if contaGerStr := r.URL.Query().Get("conta_gerencial_id"); contaGerStr != "" {
+		if id, err := uuid.Parse(contaGerStr); err == nil {
+			contaGerencialID = &id
+		}
+	}
+
+	contas, err := h.contaPagarUsecase.ListByFilter(r.Context(), empresaID, lojaID, fornecedorID, (*domain.ContaPagarStatus)(status), dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim, categoriaFinanceiraID, contaGerencialID, limit, offset)
 	if err != nil {
 		RespondError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Erro interno", err.Error())
 		return

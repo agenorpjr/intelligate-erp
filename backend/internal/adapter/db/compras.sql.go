@@ -36,7 +36,27 @@ type CreateContaPagarParams struct {
 	Observacoes         pgtype.Text    `json:"observacoes"`
 }
 
-func (q *Queries) CreateContaPagar(ctx context.Context, arg CreateContaPagarParams) (ContasPagar, error) {
+type CreateContaPagarRow struct {
+	ID                  uuid.UUID          `json:"id"`
+	EmpresaID           uuid.UUID          `json:"empresa_id"`
+	LojaID              uuid.UUID          `json:"loja_id"`
+	FornecedorID        uuid.UUID          `json:"fornecedor_id"`
+	OrdemCompraID       pgtype.UUID        `json:"ordem_compra_id"`
+	RecebimentoCompraID pgtype.UUID        `json:"recebimento_compra_id"`
+	Descricao           string             `json:"descricao"`
+	Valor               pgtype.Numeric     `json:"valor"`
+	DataEmissao         pgtype.Date        `json:"data_emissao"`
+	DataVencimento      pgtype.Date        `json:"data_vencimento"`
+	DataPagamento       pgtype.Date        `json:"data_pagamento"`
+	Status              string             `json:"status"`
+	FormaPagamento      pgtype.Text        `json:"forma_pagamento"`
+	Observacoes         pgtype.Text        `json:"observacoes"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) CreateContaPagar(ctx context.Context, arg CreateContaPagarParams) (CreateContaPagarRow, error) {
 	row := q.db.QueryRow(ctx, createContaPagar,
 		arg.EmpresaID,
 		arg.LojaID,
@@ -51,7 +71,7 @@ func (q *Queries) CreateContaPagar(ctx context.Context, arg CreateContaPagarPara
 		arg.FormaPagamento,
 		arg.Observacoes,
 	)
-	var i ContasPagar
+	var i CreateContaPagarRow
 	err := row.Scan(
 		&i.ID,
 		&i.EmpresaID,
@@ -348,7 +368,7 @@ func (q *Queries) DeleteOrdemCompraItensByOrdemCompra(ctx context.Context, ordem
 }
 
 const getContaPagar = `-- name: GetContaPagar :one
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -374,6 +394,8 @@ func (q *Queries) GetContaPagar(ctx context.Context, id uuid.UUID) (ContasPagar,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.CategoriaFinanceiraID,
+		&i.ContaGerencialID,
 	)
 	return i, err
 }
@@ -616,7 +638,7 @@ func (q *Queries) GetRecebimentoCompra(ctx context.Context, id uuid.UUID) (Receb
 }
 
 const listContasPagarByEmpresa = `-- name: ListContasPagarByEmpresa :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
@@ -656,6 +678,8 @@ func (q *Queries) ListContasPagarByEmpresa(ctx context.Context, arg ListContasPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CategoriaFinanceiraID,
+			&i.ContaGerencialID,
 		); err != nil {
 			return nil, err
 		}
@@ -668,7 +692,7 @@ func (q *Queries) ListContasPagarByEmpresa(ctx context.Context, arg ListContasPa
 }
 
 const listContasPagarByFilter = `-- name: ListContasPagarByFilter :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1
   AND deleted_at IS NULL
@@ -679,8 +703,10 @@ WHERE empresa_id = $1
   AND ($6::date IS NULL OR data_vencimento <= $6)
   AND ($7::date IS NULL OR data_pagamento >= $7)
   AND ($8::date IS NULL OR data_pagamento <= $8)
+  AND ($9::uuid IS NULL OR categoria_financeira_id = $9)
+  AND ($10::uuid IS NULL OR conta_gerencial_id = $10)
 ORDER BY data_vencimento, created_at
-LIMIT $9 OFFSET $10
+LIMIT $11 OFFSET $12
 `
 
 type ListContasPagarByFilterParams struct {
@@ -692,6 +718,8 @@ type ListContasPagarByFilterParams struct {
 	Column6   pgtype.Date `json:"column_6"`
 	Column7   pgtype.Date `json:"column_7"`
 	Column8   pgtype.Date `json:"column_8"`
+	Column9   uuid.UUID   `json:"column_9"`
+	Column10  uuid.UUID   `json:"column_10"`
 	Limit     int32       `json:"limit"`
 	Offset    int32       `json:"offset"`
 }
@@ -706,6 +734,8 @@ func (q *Queries) ListContasPagarByFilter(ctx context.Context, arg ListContasPag
 		arg.Column6,
 		arg.Column7,
 		arg.Column8,
+		arg.Column9,
+		arg.Column10,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -734,6 +764,8 @@ func (q *Queries) ListContasPagarByFilter(ctx context.Context, arg ListContasPag
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CategoriaFinanceiraID,
+			&i.ContaGerencialID,
 		); err != nil {
 			return nil, err
 		}
@@ -746,7 +778,7 @@ func (q *Queries) ListContasPagarByFilter(ctx context.Context, arg ListContasPag
 }
 
 const listContasPagarByFornecedor = `-- name: ListContasPagarByFornecedor :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE fornecedor_id = $1 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
@@ -786,6 +818,8 @@ func (q *Queries) ListContasPagarByFornecedor(ctx context.Context, arg ListConta
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CategoriaFinanceiraID,
+			&i.ContaGerencialID,
 		); err != nil {
 			return nil, err
 		}
@@ -798,7 +832,7 @@ func (q *Queries) ListContasPagarByFornecedor(ctx context.Context, arg ListConta
 }
 
 const listContasPagarByStatus = `-- name: ListContasPagarByStatus :many
-SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at
+SELECT id, empresa_id, loja_id, fornecedor_id, ordem_compra_id, recebimento_compra_id, descricao, valor, data_emissao, data_vencimento, data_pagamento, status, forma_pagamento, observacoes, created_at, updated_at, deleted_at, categoria_financeira_id, conta_gerencial_id
 FROM contas_pagar
 WHERE empresa_id = $1 AND status = $2 AND deleted_at IS NULL
 ORDER BY data_vencimento, created_at
@@ -844,6 +878,8 @@ func (q *Queries) ListContasPagarByStatus(ctx context.Context, arg ListContasPag
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.CategoriaFinanceiraID,
+			&i.ContaGerencialID,
 		); err != nil {
 			return nil, err
 		}
@@ -1321,7 +1357,27 @@ type UpdateContaPagarParams struct {
 	Observacoes    pgtype.Text    `json:"observacoes"`
 }
 
-func (q *Queries) UpdateContaPagar(ctx context.Context, arg UpdateContaPagarParams) (ContasPagar, error) {
+type UpdateContaPagarRow struct {
+	ID                  uuid.UUID          `json:"id"`
+	EmpresaID           uuid.UUID          `json:"empresa_id"`
+	LojaID              uuid.UUID          `json:"loja_id"`
+	FornecedorID        uuid.UUID          `json:"fornecedor_id"`
+	OrdemCompraID       pgtype.UUID        `json:"ordem_compra_id"`
+	RecebimentoCompraID pgtype.UUID        `json:"recebimento_compra_id"`
+	Descricao           string             `json:"descricao"`
+	Valor               pgtype.Numeric     `json:"valor"`
+	DataEmissao         pgtype.Date        `json:"data_emissao"`
+	DataVencimento      pgtype.Date        `json:"data_vencimento"`
+	DataPagamento       pgtype.Date        `json:"data_pagamento"`
+	Status              string             `json:"status"`
+	FormaPagamento      pgtype.Text        `json:"forma_pagamento"`
+	Observacoes         pgtype.Text        `json:"observacoes"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateContaPagar(ctx context.Context, arg UpdateContaPagarParams) (UpdateContaPagarRow, error) {
 	row := q.db.QueryRow(ctx, updateContaPagar,
 		arg.ID,
 		arg.Descricao,
@@ -1333,7 +1389,7 @@ func (q *Queries) UpdateContaPagar(ctx context.Context, arg UpdateContaPagarPara
 		arg.FormaPagamento,
 		arg.Observacoes,
 	)
-	var i ContasPagar
+	var i UpdateContaPagarRow
 	err := row.Scan(
 		&i.ID,
 		&i.EmpresaID,
@@ -1370,14 +1426,34 @@ type UpdateContaPagarStatusParams struct {
 	FormaPagamento pgtype.Text `json:"forma_pagamento"`
 }
 
-func (q *Queries) UpdateContaPagarStatus(ctx context.Context, arg UpdateContaPagarStatusParams) (ContasPagar, error) {
+type UpdateContaPagarStatusRow struct {
+	ID                  uuid.UUID          `json:"id"`
+	EmpresaID           uuid.UUID          `json:"empresa_id"`
+	LojaID              uuid.UUID          `json:"loja_id"`
+	FornecedorID        uuid.UUID          `json:"fornecedor_id"`
+	OrdemCompraID       pgtype.UUID        `json:"ordem_compra_id"`
+	RecebimentoCompraID pgtype.UUID        `json:"recebimento_compra_id"`
+	Descricao           string             `json:"descricao"`
+	Valor               pgtype.Numeric     `json:"valor"`
+	DataEmissao         pgtype.Date        `json:"data_emissao"`
+	DataVencimento      pgtype.Date        `json:"data_vencimento"`
+	DataPagamento       pgtype.Date        `json:"data_pagamento"`
+	Status              string             `json:"status"`
+	FormaPagamento      pgtype.Text        `json:"forma_pagamento"`
+	Observacoes         pgtype.Text        `json:"observacoes"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) UpdateContaPagarStatus(ctx context.Context, arg UpdateContaPagarStatusParams) (UpdateContaPagarStatusRow, error) {
 	row := q.db.QueryRow(ctx, updateContaPagarStatus,
 		arg.ID,
 		arg.Status,
 		arg.DataPagamento,
 		arg.FormaPagamento,
 	)
-	var i ContasPagar
+	var i UpdateContaPagarStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.EmpresaID,

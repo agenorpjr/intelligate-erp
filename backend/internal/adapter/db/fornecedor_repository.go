@@ -900,7 +900,7 @@ func (r *ContaPagarRepository) ListByStatus(ctx context.Context, empresaID uuid.
 	return contas, nil
 }
 
-func (r *ContaPagarRepository) ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *domain.ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, limit, offset int) ([]*domain.ContaPagar, error) {
+func (r *ContaPagarRepository) ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *domain.ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, categoriaFinanceiraID, contaGerencialID *uuid.UUID, limit, offset int) ([]*domain.ContaPagar, error) {
 	var lojaIDParam, fornecedorIDParam uuid.UUID
 	if lojaID != nil {
 		lojaIDParam = *lojaID
@@ -925,6 +925,13 @@ func (r *ContaPagarRepository) ListByFilter(ctx context.Context, empresaID uuid.
 	if dataPagamentoFim != nil {
 		dataPagamentoFimParam = pgtype.Date{Time: *dataPagamentoFim, Valid: true}
 	}
+	var catFinIDParam, contaGerIDParam pgtype.UUID
+	if categoriaFinanceiraID != nil {
+		catFinIDParam = pgtype.UUID{Bytes: *categoriaFinanceiraID, Valid: true}
+	}
+	if contaGerencialID != nil {
+		contaGerIDParam = pgtype.UUID{Bytes: *contaGerencialID, Valid: true}
+	}
 	results, err := r.querier.ListContasPagarByFilter(ctx, ListContasPagarByFilterParams{
 		EmpresaID: empresaID,
 		Column2:   lojaIDParam,
@@ -934,6 +941,8 @@ func (r *ContaPagarRepository) ListByFilter(ctx context.Context, empresaID uuid.
 		Column6:   dataVencimentoFimParam,
 		Column7:   dataPagamentoInicioParam,
 		Column8:   dataPagamentoFimParam,
+		Column9:   catFinIDParam.Bytes,
+		Column10:  contaGerIDParam.Bytes,
 		Limit:     int32(limit),
 		Offset:    int32(offset),
 	})

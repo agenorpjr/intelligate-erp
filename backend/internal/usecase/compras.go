@@ -903,14 +903,14 @@ func (uc *ContaPagarUsecase) ListByStatus(ctx context.Context, empresaID uuid.UU
 	return uc.contaPagarRepo.ListByStatus(ctx, empresaID, status, limit, offset)
 }
 
-func (uc *ContaPagarUsecase) ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *domain.ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, limit, offset int) ([]*domain.ContaPagar, error) {
+func (uc *ContaPagarUsecase) ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *domain.ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, categoriaFinanceiraID, contaGerencialID *uuid.UUID, limit, offset int) ([]*domain.ContaPagar, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
 	if offset < 0 {
 		offset = 0
 	}
-	return uc.contaPagarRepo.ListByFilter(ctx, empresaID, lojaID, fornecedorID, status, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim, limit, offset)
+	return uc.contaPagarRepo.ListByFilter(ctx, empresaID, lojaID, fornecedorID, status, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim, categoriaFinanceiraID, contaGerencialID, limit, offset)
 }
 
 func (uc *ContaPagarUsecase) Update(ctx context.Context, id uuid.UUID, input domain.UpdateContaPagarInput, usuarioID uuid.UUID) (*domain.ContaPagar, error) {

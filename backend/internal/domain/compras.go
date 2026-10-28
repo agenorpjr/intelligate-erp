@@ -192,51 +192,59 @@ const (
 
 // ContaPagar representa uma conta a pagar
 type ContaPagar struct {
-	ID                  uuid.UUID        `json:"id"`
-	EmpresaID           uuid.UUID        `json:"empresa_id"`
-	LojaID              uuid.UUID        `json:"loja_id"`
-	FornecedorID        uuid.UUID        `json:"fornecedor_id"`
-	OrdemCompraID       *uuid.UUID       `json:"ordem_compra_id,omitempty"`
-	RecebimentoCompraID *uuid.UUID       `json:"recebimento_compra_id,omitempty"`
-	Descricao           string           `json:"descricao"`
-	Valor               float64          `json:"valor"`
-	DataEmissao         time.Time        `json:"data_emissao"`
-	DataVencimento      time.Time        `json:"data_vencimento"`
-	DataPagamento       *time.Time       `json:"data_pagamento,omitempty"`
-	Status              ContaPagarStatus `json:"status"`
-	FormaPagamento      *string          `json:"forma_pagamento,omitempty"`
-	Observacoes         *string          `json:"observacoes,omitempty"`
-	CreatedAt           time.Time        `json:"created_at"`
-	UpdatedAt           time.Time        `json:"updated_at"`
-	DeletedAt           *time.Time       `json:"deleted_at,omitempty"`
-	Fornecedor          *Fornecedor      `json:"fornecedor,omitempty"`
-	Loja                *Loja            `json:"loja,omitempty"`
+	ID                    uuid.UUID            `json:"id"`
+	EmpresaID             uuid.UUID            `json:"empresa_id"`
+	LojaID                uuid.UUID            `json:"loja_id"`
+	FornecedorID          uuid.UUID            `json:"fornecedor_id"`
+	OrdemCompraID         *uuid.UUID           `json:"ordem_compra_id,omitempty"`
+	RecebimentoCompraID   *uuid.UUID           `json:"recebimento_compra_id,omitempty"`
+	Descricao             string               `json:"descricao"`
+	Valor                 float64              `json:"valor"`
+	DataEmissao           time.Time            `json:"data_emissao"`
+	DataVencimento        time.Time            `json:"data_vencimento"`
+	DataPagamento         *time.Time           `json:"data_pagamento,omitempty"`
+	Status                ContaPagarStatus     `json:"status"`
+	FormaPagamento        *string              `json:"forma_pagamento,omitempty"`
+	Observacoes           *string              `json:"observacoes,omitempty"`
+	CategoriaFinanceiraID *uuid.UUID           `json:"categoria_financeira_id,omitempty"`
+	CategoriaFinanceira   *CategoriaFinanceira `json:"categoria_financeira,omitempty"`
+	ContaGerencialID      *uuid.UUID           `json:"conta_gerencial_id,omitempty"`
+	ContaGerencial        *ContaGerencial      `json:"conta_gerencial,omitempty"`
+	CreatedAt             time.Time            `json:"created_at"`
+	UpdatedAt             time.Time            `json:"updated_at"`
+	DeletedAt             *time.Time           `json:"deleted_at,omitempty"`
+	Fornecedor            *Fornecedor          `json:"fornecedor,omitempty"`
+	Loja                  *Loja                `json:"loja,omitempty"`
 }
 
 type CreateContaPagarInput struct {
-	EmpresaID           uuid.UUID  `json:"empresa_id" validate:"required"`
-	LojaID              uuid.UUID  `json:"loja_id" validate:"required"`
-	FornecedorID        uuid.UUID  `json:"fornecedor_id" validate:"required"`
-	OrdemCompraID       *uuid.UUID `json:"ordem_compra_id,omitempty"`
-	RecebimentoCompraID *uuid.UUID `json:"recebimento_compra_id,omitempty"`
-	Descricao           string     `json:"descricao" validate:"required"`
-	Valor               float64    `json:"valor" validate:"required,gt=0"`
-	DataEmissao         time.Time  `json:"data_emissao" validate:"required"`
-	DataVencimento      time.Time  `json:"data_vencimento" validate:"required"`
-	Status              *string    `json:"status,omitempty"`
-	FormaPagamento      *string    `json:"forma_pagamento,omitempty"`
-	Observacoes         *string    `json:"observacoes,omitempty"`
+	EmpresaID             uuid.UUID  `json:"empresa_id" validate:"required"`
+	LojaID                uuid.UUID  `json:"loja_id" validate:"required"`
+	FornecedorID          uuid.UUID  `json:"fornecedor_id" validate:"required"`
+	OrdemCompraID         *uuid.UUID `json:"ordem_compra_id,omitempty"`
+	RecebimentoCompraID   *uuid.UUID `json:"recebimento_compra_id,omitempty"`
+	Descricao             string     `json:"descricao" validate:"required"`
+	Valor                 float64    `json:"valor" validate:"required,gt=0"`
+	DataEmissao           time.Time  `json:"data_emissao" validate:"required"`
+	DataVencimento        time.Time  `json:"data_vencimento" validate:"required"`
+	Status                *string    `json:"status,omitempty"`
+	FormaPagamento        *string    `json:"forma_pagamento,omitempty"`
+	Observacoes           *string    `json:"observacoes,omitempty"`
+	CategoriaFinanceiraID *uuid.UUID `json:"categoria_financeira_id,omitempty"`
+	ContaGerencialID      *uuid.UUID `json:"conta_gerencial_id,omitempty"`
 }
 
 type UpdateContaPagarInput struct {
-	Descricao      *string    `json:"descricao,omitempty"`
-	Valor          *float64   `json:"valor,omitempty"`
-	DataEmissao    *time.Time `json:"data_emissao,omitempty"`
-	DataVencimento *time.Time `json:"data_vencimento,omitempty"`
-	DataPagamento  *time.Time `json:"data_pagamento,omitempty"`
-	Status         *string    `json:"status,omitempty"`
-	FormaPagamento *string    `json:"forma_pagamento,omitempty"`
-	Observacoes    *string    `json:"observacoes,omitempty"`
+	Descricao             *string    `json:"descricao,omitempty"`
+	Valor                 *float64   `json:"valor,omitempty"`
+	DataEmissao           *time.Time `json:"data_emissao,omitempty"`
+	DataVencimento        *time.Time `json:"data_vencimento,omitempty"`
+	DataPagamento         *time.Time `json:"data_pagamento,omitempty"`
+	Status                *string    `json:"status,omitempty"`
+	FormaPagamento        *string    `json:"forma_pagamento,omitempty"`
+	Observacoes           *string    `json:"observacoes,omitempty"`
+	CategoriaFinanceiraID *uuid.UUID `json:"categoria_financeira_id,omitempty"`
+	ContaGerencialID      *uuid.UUID `json:"conta_gerencial_id,omitempty"`
 }
 
 type PagarContaInput struct {
@@ -245,12 +253,14 @@ type PagarContaInput struct {
 }
 
 type ContaPagarFilter struct {
-	EmpresaID            *uuid.UUID
-	LojaID               *uuid.UUID
-	FornecedorID         *uuid.UUID
-	Status               *ContaPagarStatus
-	DataVencimentoInicio *time.Time
-	DataVencimentoFim    *time.Time
-	Limit                int
-	Offset               int
+	EmpresaID             *uuid.UUID
+	LojaID                *uuid.UUID
+	FornecedorID          *uuid.UUID
+	Status                *ContaPagarStatus
+	DataVencimentoInicio  *time.Time
+	DataVencimentoFim     *time.Time
+	CategoriaFinanceiraID *uuid.UUID
+	ContaGerencialID      *uuid.UUID
+	Limit                 int
+	Offset                int
 }

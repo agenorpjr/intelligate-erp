@@ -247,8 +247,49 @@ type ContaPagarRepository interface {
 	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, limit, offset int) ([]*ContaPagar, error)
 	ListByFornecedor(ctx context.Context, fornecedorID uuid.UUID, limit, offset int) ([]*ContaPagar, error)
 	ListByStatus(ctx context.Context, empresaID uuid.UUID, status ContaPagarStatus, limit, offset int) ([]*ContaPagar, error)
-	ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, limit, offset int) ([]*ContaPagar, error)
+	ListByFilter(ctx context.Context, empresaID uuid.UUID, lojaID, fornecedorID *uuid.UUID, status *ContaPagarStatus, dataVencimentoInicio, dataVencimentoFim, dataPagamentoInicio, dataPagamentoFim *time.Time, categoriaFinanceiraID, contaGerencialID *uuid.UUID, limit, offset int) ([]*ContaPagar, error)
 	Update(ctx context.Context, cp *ContaPagar) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status ContaPagarStatus, dataPagamento *time.Time, formaPagamento *string) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// Financeiro domain repositories
+type ContaGerencialRepository interface {
+	Create(ctx context.Context, cg *ContaGerencial) error
+	GetByID(ctx context.Context, id uuid.UUID) (*ContaGerencial, error)
+	GetByCodigo(ctx context.Context, empresaID uuid.UUID, codigo string) (*ContaGerencial, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, filter ContaGerencialFilter) ([]*ContaGerencial, error)
+	ListByEmpresaHierarquia(ctx context.Context, empresaID uuid.UUID) ([]*ContaGerencial, error)
+	Update(ctx context.Context, cg *ContaGerencial) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	HasMovimentacoes(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
+type CategoriaFinanceiraRepository interface {
+	Create(ctx context.Context, cf *CategoriaFinanceira) error
+	GetByID(ctx context.Context, id uuid.UUID) (*CategoriaFinanceira, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, filter CategoriaFinanceiraFilter) ([]*CategoriaFinanceira, error)
+	Update(ctx context.Context, cf *CategoriaFinanceira) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type MovimentacaoCaixaRepository interface {
+	Create(ctx context.Context, mc *MovimentacaoCaixa) error
+	GetByID(ctx context.Context, id uuid.UUID) (*MovimentacaoCaixa, error)
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID, filter MovimentacaoCaixaFilter) ([]*MovimentacaoCaixa, error)
+	ListByLoja(ctx context.Context, lojaID uuid.UUID, filter MovimentacaoCaixaFilter) ([]*MovimentacaoCaixa, error)
+	Update(ctx context.Context, mc *MovimentacaoCaixa) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	GetSaldoPeriodo(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (float64, error)
+	GetTotaisPorContaGerencial(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (map[uuid.UUID]float64, error)
+	GetTotaisPorCategoriaFinanceira(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (map[uuid.UUID]float64, error)
+}
+
+// DRE e Fluxo de Caixa repositories (read-only, baseados em queries agregadas)
+type DREGerencialRepository interface {
+	GetDRE(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (*DREGerencial, error)
+}
+
+type FluxoCaixaRepository interface {
+	GetFluxoCaixa(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (*FluxoCaixa, error)
 }

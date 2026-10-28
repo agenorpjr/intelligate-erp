@@ -8,13 +8,20 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CheckContaGerencialHasMovimentacoes(ctx context.Context, contaGerencialID pgtype.UUID) (bool, error)
 	CreateAuditoria(ctx context.Context, arg CreateAuditoriaParams) (Auditorium, error)
 	// Categoria Canônica
 	CreateCategoriaCanonica(ctx context.Context, arg CreateCategoriaCanonicaParams) (CategoriasCanonica, error)
-	CreateContaPagar(ctx context.Context, arg CreateContaPagarParams) (ContasPagar, error)
+	// ============================================================
+	// Categorias Financeiras
+	// ============================================================
+	CreateCategoriaFinanceira(ctx context.Context, arg CreateCategoriaFinanceiraParams) (CategoriasFinanceira, error)
+	CreateContaGerencial(ctx context.Context, arg CreateContaGerencialParams) (ContasGerenciai, error)
+	CreateContaPagar(ctx context.Context, arg CreateContaPagarParams) (CreateContaPagarRow, error)
 	CreateEmpresa(ctx context.Context, arg CreateEmpresaParams) (Empresa, error)
 	// Evento Ingestão
 	CreateEventoIngestao(ctx context.Context, arg CreateEventoIngestaoParams) (EventosIngestao, error)
@@ -28,6 +35,10 @@ type Querier interface {
 	// Insumo Custos (Histórico)
 	CreateInsumoCusto(ctx context.Context, arg CreateInsumoCustoParams) (InsumoCusto, error)
 	CreateLoja(ctx context.Context, arg CreateLojaParams) (Loja, error)
+	// ============================================================
+	// Movimentações de Caixa
+	// ============================================================
+	CreateMovimentacaoCaixa(ctx context.Context, arg CreateMovimentacaoCaixaParams) (MovimentacoesCaixa, error)
 	CreateOrdemCompra(ctx context.Context, arg CreateOrdemCompraParams) (OrdensCompra, error)
 	CreateOrdemCompraItem(ctx context.Context, arg CreateOrdemCompraItemParams) (OrdemCompraIten, error)
 	CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei, error)
@@ -52,6 +63,8 @@ type Querier interface {
 	CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (Usuario, error)
 	CreateUsuarioPapel(ctx context.Context, arg CreateUsuarioPapelParams) (UsuariosPapei, error)
 	DeleteCategoriaCanonica(ctx context.Context, id uuid.UUID) error
+	DeleteCategoriaFinanceira(ctx context.Context, id uuid.UUID) error
+	DeleteContaGerencial(ctx context.Context, id uuid.UUID) error
 	DeleteContaPagar(ctx context.Context, id uuid.UUID) error
 	DeleteEmpresa(ctx context.Context, id uuid.UUID) error
 	DeleteEventoIngestao(ctx context.Context, id uuid.UUID) error
@@ -61,6 +74,7 @@ type Querier interface {
 	DeleteFornecedor(ctx context.Context, id uuid.UUID) error
 	DeleteInsumo(ctx context.Context, id uuid.UUID) error
 	DeleteLoja(ctx context.Context, id uuid.UUID) error
+	DeleteMovimentacaoCaixa(ctx context.Context, id uuid.UUID) error
 	DeleteOrdemCompra(ctx context.Context, id uuid.UUID) error
 	DeleteOrdemCompraItem(ctx context.Context, id uuid.UUID) error
 	DeleteOrdemCompraItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) error
@@ -81,7 +95,17 @@ type Querier interface {
 	// CMV Queries
 	GetCMVResumo(ctx context.Context, arg GetCMVResumoParams) (GetCMVResumoRow, error)
 	GetCategoriaCanonica(ctx context.Context, id uuid.UUID) (CategoriasCanonica, error)
+	GetCategoriaFinanceira(ctx context.Context, id uuid.UUID) (CategoriasFinanceira, error)
+	GetContaGerencial(ctx context.Context, id uuid.UUID) (ContasGerenciai, error)
+	GetContaGerencialByCodigo(ctx context.Context, arg GetContaGerencialByCodigoParams) (ContasGerenciai, error)
 	GetContaPagar(ctx context.Context, id uuid.UUID) (ContasPagar, error)
+	GetDREGerencialCustos(ctx context.Context, arg GetDREGerencialCustosParams) ([]GetDREGerencialCustosRow, error)
+	GetDREGerencialDespesas(ctx context.Context, arg GetDREGerencialDespesasParams) ([]GetDREGerencialDespesasRow, error)
+	GetDREGerencialInvestimentos(ctx context.Context, arg GetDREGerencialInvestimentosParams) ([]GetDREGerencialInvestimentosRow, error)
+	// ============================================================
+	// DRE Gerencial
+	// ============================================================
+	GetDREGerencialReceitas(ctx context.Context, arg GetDREGerencialReceitasParams) ([]GetDREGerencialReceitasRow, error)
 	GetEmpresa(ctx context.Context, id uuid.UUID) (Empresa, error)
 	GetEmpresaByCNPJ(ctx context.Context, cnpj string) (Empresa, error)
 	GetEventoIngestao(ctx context.Context, id uuid.UUID) (EventosIngestao, error)
@@ -89,6 +113,11 @@ type Querier interface {
 	GetFichaTecnica(ctx context.Context, id uuid.UUID) (FichasTecnica, error)
 	GetFichaTecnicaByProdutoLoja(ctx context.Context, arg GetFichaTecnicaByProdutoLojaParams) (FichasTecnica, error)
 	GetFichaTecnicaComponente(ctx context.Context, id uuid.UUID) (FichaTecnicaComponente, error)
+	// ============================================================
+	// Fluxo de Caixa
+	// ============================================================
+	GetFluxoCaixaEntradas(ctx context.Context, arg GetFluxoCaixaEntradasParams) ([]GetFluxoCaixaEntradasRow, error)
+	GetFluxoCaixaSaidas(ctx context.Context, arg GetFluxoCaixaSaidasParams) ([]GetFluxoCaixaSaidasRow, error)
 	GetFornecedor(ctx context.Context, id uuid.UUID) (Fornecedore, error)
 	GetFornecedorByCNPJCPF(ctx context.Context, arg GetFornecedorByCNPJCPFParams) (Fornecedore, error)
 	GetInsumo(ctx context.Context, id uuid.UUID) (Insumo, error)
@@ -100,6 +129,7 @@ type Querier interface {
 	GetInsumoCustoVigente(ctx context.Context, arg GetInsumoCustoVigenteParams) (InsumoCusto, error)
 	GetInsumoForUpdate(ctx context.Context, id uuid.UUID) (Insumo, error)
 	GetLoja(ctx context.Context, id uuid.UUID) (Loja, error)
+	GetMovimentacaoCaixa(ctx context.Context, id uuid.UUID) (MovimentacoesCaixa, error)
 	GetOrdemCompra(ctx context.Context, id uuid.UUID) (OrdensCompra, error)
 	GetOrdemCompraItem(ctx context.Context, id uuid.UUID) (OrdemCompraIten, error)
 	GetOrdemCompraWithItens(ctx context.Context, id uuid.UUID) ([]GetOrdemCompraWithItensRow, error)
@@ -120,6 +150,9 @@ type Querier interface {
 	GetProdutoCanonicoBySKU(ctx context.Context, arg GetProdutoCanonicoBySKUParams) (ProdutosCanonico, error)
 	GetProdutosSemFichaTecnica(ctx context.Context, arg GetProdutosSemFichaTecnicaParams) ([]GetProdutosSemFichaTecnicaRow, error)
 	GetRecebimentoCompra(ctx context.Context, id uuid.UUID) (RecebimentosCompra, error)
+	GetSaldoPeriodo(ctx context.Context, arg GetSaldoPeriodoParams) (interface{}, error)
+	GetTotaisPorCategoriaFinanceira(ctx context.Context, arg GetTotaisPorCategoriaFinanceiraParams) ([]GetTotaisPorCategoriaFinanceiraRow, error)
+	GetTotaisPorContaGerencial(ctx context.Context, arg GetTotaisPorContaGerencialParams) ([]GetTotaisPorContaGerencialRow, error)
 	GetUsuario(ctx context.Context, id uuid.UUID) (Usuario, error)
 	GetUsuarioByEmail(ctx context.Context, email string) (Usuario, error)
 	GetUsuarioByEmailAndEmpresa(ctx context.Context, arg GetUsuarioByEmailAndEmpresaParams) (Usuario, error)
@@ -130,6 +163,9 @@ type Querier interface {
 	HealthCheck(ctx context.Context) (int32, error)
 	ListAuditoria(ctx context.Context, arg ListAuditoriaParams) ([]Auditorium, error)
 	ListCategoriasCanonicasByEmpresa(ctx context.Context, arg ListCategoriasCanonicasByEmpresaParams) ([]CategoriasCanonica, error)
+	ListCategoriasFinanceirasByEmpresa(ctx context.Context, arg ListCategoriasFinanceirasByEmpresaParams) ([]CategoriasFinanceira, error)
+	ListContasGerenciaisByEmpresa(ctx context.Context, arg ListContasGerenciaisByEmpresaParams) ([]ContasGerenciai, error)
+	ListContasGerenciaisByEmpresaHierarquia(ctx context.Context, empresaID uuid.UUID) ([]ContasGerenciai, error)
 	ListContasPagarByEmpresa(ctx context.Context, arg ListContasPagarByEmpresaParams) ([]ContasPagar, error)
 	ListContasPagarByFilter(ctx context.Context, arg ListContasPagarByFilterParams) ([]ContasPagar, error)
 	ListContasPagarByFornecedor(ctx context.Context, arg ListContasPagarByFornecedorParams) ([]ContasPagar, error)
@@ -145,6 +181,8 @@ type Querier interface {
 	ListInsumoCustosByInsumo(ctx context.Context, arg ListInsumoCustosByInsumoParams) ([]InsumoCusto, error)
 	ListInsumosByEmpresa(ctx context.Context, arg ListInsumosByEmpresaParams) ([]Insumo, error)
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
+	ListMovimentacoesCaixaByEmpresa(ctx context.Context, arg ListMovimentacoesCaixaByEmpresaParams) ([]MovimentacoesCaixa, error)
+	ListMovimentacoesCaixaByLoja(ctx context.Context, arg ListMovimentacoesCaixaByLojaParams) ([]MovimentacoesCaixa, error)
 	ListOrdemCompraItensByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]OrdemCompraIten, error)
 	ListOrdensCompraByEmpresa(ctx context.Context, arg ListOrdensCompraByEmpresaParams) ([]OrdensCompra, error)
 	ListOrdensCompraByFilter(ctx context.Context, arg ListOrdensCompraByFilterParams) ([]OrdensCompra, error)
@@ -166,8 +204,10 @@ type Querier interface {
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
 	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
-	UpdateContaPagar(ctx context.Context, arg UpdateContaPagarParams) (ContasPagar, error)
-	UpdateContaPagarStatus(ctx context.Context, arg UpdateContaPagarStatusParams) (ContasPagar, error)
+	UpdateCategoriaFinanceira(ctx context.Context, arg UpdateCategoriaFinanceiraParams) (CategoriasFinanceira, error)
+	UpdateContaGerencial(ctx context.Context, arg UpdateContaGerencialParams) (ContasGerenciai, error)
+	UpdateContaPagar(ctx context.Context, arg UpdateContaPagarParams) (UpdateContaPagarRow, error)
+	UpdateContaPagarStatus(ctx context.Context, arg UpdateContaPagarStatusParams) (UpdateContaPagarStatusRow, error)
 	UpdateEmpresa(ctx context.Context, arg UpdateEmpresaParams) (Empresa, error)
 	UpdateEventoIngestao(ctx context.Context, arg UpdateEventoIngestaoParams) (EventosIngestao, error)
 	UpdateFichaTecnica(ctx context.Context, arg UpdateFichaTecnicaParams) (FichasTecnica, error)
@@ -176,6 +216,7 @@ type Querier interface {
 	UpdateInsumo(ctx context.Context, arg UpdateInsumoParams) (Insumo, error)
 	UpdateInsumoCustoUnitario(ctx context.Context, arg UpdateInsumoCustoUnitarioParams) (Insumo, error)
 	UpdateLoja(ctx context.Context, arg UpdateLojaParams) (Loja, error)
+	UpdateMovimentacaoCaixa(ctx context.Context, arg UpdateMovimentacaoCaixaParams) (MovimentacoesCaixa, error)
 	UpdateOrdemCompra(ctx context.Context, arg UpdateOrdemCompraParams) (OrdensCompra, error)
 	UpdateOrdemCompraItem(ctx context.Context, arg UpdateOrdemCompraItemParams) (OrdemCompraIten, error)
 	UpdateOrdemCompraItemQuantidadeRecebida(ctx context.Context, arg UpdateOrdemCompraItemQuantidadeRecebidaParams) (OrdemCompraIten, error)
