@@ -13,6 +13,13 @@ import (
 
 type Querier interface {
 	CheckContaGerencialHasMovimentacoes(ctx context.Context, contaGerencialID pgtype.UUID) (bool, error)
+	CreateAgenteMensagem(ctx context.Context, arg CreateAgenteMensagemParams) (AgenteMensagen, error)
+	// ============================================================
+	// Agente de IA para análise gerencial (Etapa 13)
+	// ============================================================
+	// Sessões de conversa e mensagens. O contexto usado é persistido em JSONB
+	// para auditoria/rastreabilidade. Nenhum segredo é armazenado.
+	CreateAgenteSessao(ctx context.Context, arg CreateAgenteSessaoParams) (AgenteSesso, error)
 	CreateAuditoria(ctx context.Context, arg CreateAuditoriaParams) (Auditorium, error)
 	// Categoria Canônica
 	CreateCategoriaCanonica(ctx context.Context, arg CreateCategoriaCanonicaParams) (CategoriasCanonica, error)
@@ -92,6 +99,7 @@ type Querier interface {
 	DeleteProdutoCanonico(ctx context.Context, id uuid.UUID) error
 	DeleteUsuario(ctx context.Context, id uuid.UUID) error
 	DeleteUsuarioPapel(ctx context.Context, id uuid.UUID) error
+	GetAgenteSessao(ctx context.Context, id uuid.UUID) (AgenteSesso, error)
 	GetCMVProdutosDetalhe(ctx context.Context, arg GetCMVProdutosDetalheParams) ([]GetCMVProdutosDetalheRow, error)
 	// CMV Queries
 	GetCMVResumo(ctx context.Context, arg GetCMVResumoParams) (GetCMVResumoRow, error)
@@ -199,6 +207,8 @@ type Querier interface {
 	GetVendasResumo(ctx context.Context, arg GetVendasResumoParams) (GetVendasResumoRow, error)
 	// Health check query
 	HealthCheck(ctx context.Context) (int32, error)
+	ListAgenteMensagensBySessao(ctx context.Context, sessaoID uuid.UUID) ([]AgenteMensagen, error)
+	ListAgenteSessoes(ctx context.Context, arg ListAgenteSessoesParams) ([]AgenteSesso, error)
 	ListAuditoria(ctx context.Context, arg ListAuditoriaParams) ([]Auditorium, error)
 	ListCategoriasCanonicasByEmpresa(ctx context.Context, arg ListCategoriasCanonicasByEmpresaParams) ([]CategoriasCanonica, error)
 	ListCategoriasFinanceirasByEmpresa(ctx context.Context, arg ListCategoriasFinanceirasByEmpresaParams) ([]CategoriasFinanceira, error)
@@ -243,6 +253,7 @@ type Querier interface {
 	ListRecebimentosCompraByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]RecebimentosCompra, error)
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
+	UpdateAgenteSessaoStatus(ctx context.Context, arg UpdateAgenteSessaoStatusParams) error
 	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
 	UpdateCategoriaFinanceira(ctx context.Context, arg UpdateCategoriaFinanceiraParams) (CategoriasFinanceira, error)
 	UpdateContaGerencial(ctx context.Context, arg UpdateContaGerencialParams) (ContasGerenciai, error)

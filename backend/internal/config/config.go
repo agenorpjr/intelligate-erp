@@ -20,6 +20,14 @@ type Config struct {
 	JWTExpiry          time.Duration
 	EncryptionKey      string
 	EncryptionKeyBytes []byte
+
+	// Configuração do provedor de IA (Etapa 13).
+	// AIProvider: "openai", "anthropic" ou "mock".
+	// AIAPIKey nunca deve ser registrada em logs.
+	AIProvider string
+	AIAPIKey   string
+	AIModel    string
+	AIBaseURL  string
 }
 
 func Load() (*Config, error) {
@@ -61,6 +69,10 @@ func Load() (*Config, error) {
 		JWTExpiry:          jwtExpiry,
 		EncryptionKey:      encryptionKey,
 		EncryptionKeyBytes: encryptionKeyBytes,
+		AIProvider:         getEnv("INTELLIGATE_AI_PROVIDER", "mock"),
+		AIAPIKey:           getEnv("INTELLIGATE_AI_API_KEY", ""),
+		AIModel:            getEnv("INTELLIGATE_AI_MODEL", ""),
+		AIBaseURL:          getEnv("INTELLIGATE_AI_BASE_URL", ""),
 	}, nil
 }
 

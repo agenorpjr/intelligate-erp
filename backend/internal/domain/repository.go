@@ -317,3 +317,13 @@ type EstoqueRepository interface {
 	GetResumoPerdas(ctx context.Context, filter ResumoPerdasFilter) (*ResumoPerdas, error)
 	WithTx(ctx context.Context, fn func(tx EstoqueTxRepository) error) error
 }
+
+// AgenteRepository fornece acesso às sessões e mensagens do agente de IA.
+type AgenteRepository interface {
+	CreateSessao(ctx context.Context, s *AgenteSessao) error
+	GetSessao(ctx context.Context, id uuid.UUID) (*AgenteSessao, error)
+	ListSessoes(ctx context.Context, filter AgenteSessaoFilter) ([]*AgenteSessao, error)
+	UpdateSessaoStatus(ctx context.Context, id uuid.UUID, status string) error
+	CreateMensagem(ctx context.Context, m *AgenteMensagem) error
+	ListMensagensBySessao(ctx context.Context, sessaoID uuid.UUID) ([]*AgenteMensagem, error)
+}

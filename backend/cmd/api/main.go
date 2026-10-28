@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/intelligate/erp/backend/internal/adapter/ai"
 	"github.com/intelligate/erp/backend/internal/adapter/db"
 	httpadapter "github.com/intelligate/erp/backend/internal/adapter/http"
 	"github.com/intelligate/erp/backend/internal/config"
@@ -81,6 +82,9 @@ func main() {
 	// Estoque (Etapa 12) repository
 	estoqueRepo := db.NewEstoqueRepository(dbpool)
 
+	// Agente de IA (Etapa 13) repository
+	agenteRepo := db.NewAgenteRepository(dbpool)
+
 	// Initialize crypto service
 	cryptoService, err := crypto.NewCryptoServiceFromEnv()
 	if err != nil {
@@ -138,6 +142,28 @@ func main() {
 	// Dashboard (Etapa 11) usecase
 	dashboardUsecase := usecase.NewDashboardUsecase(dashboardRepo, lojaRepo)
 
+	// Agente de IA (Etapa 13) - cliente LLM e usecase
+	llmClient, err := ai.NewLLMClient(ai.Config{
+		Provider: cfg.AIProvider,
+		APIKey:   cfg.AIAPIKey,
+		Model:    cfg.AIModel,
+		BaseURL:  cfg.AIBaseURL,
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize AI provider")
+	}
+	log.Info().Str("provider", llmClient.Provider()).Msg("AI provider initialized")
+
+	agenteUsecase := usecase.NewAgenteUsecase(
+		agenteRepo,
+		dashboardRepo,
+		fichaTecnicaRepo,
+		estoqueRepo,
+		lojaRepo,
+		auditoriaRepo,
+		llmClient,
+	)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
@@ -167,6 +193,9 @@ func main() {
 
 	// Estoque (Etapa 12) handler
 	estoqueHandler := httpadapter.NewEstoqueHandler(estoqueUsecase)
+
+	// Agente de IA (Etapa 13) handler
+	agenteHandler := httpadapter.NewAgenteHandler(agenteUsecase)
 
 	// Create router
 	r := chi.NewRouter()
@@ -315,6 +344,12 @@ func main() {
 			r.Post("/estoque/transferencias", estoqueHandler.Transferir)
 			r.Get("/estoque/movimentacoes", estoqueHandler.ListMovimentacoes)
 			r.Get("/estoque/perdas", estoqueHandler.GetResumoPerdas)
+
+			// Agente de IA (Etapa 13) - Análise gerencial
+			r.Post("/agente/sessoes", agenteHandler.CriarSessao)
+			r.Get("/agente/sessoes", agenteHandler.ListarSessoes)
+			r.Get("/agente/sessoes/{id}", agenteHandler.ObterSessao)
+			r.Post("/agente/sessoes/{id}/perguntas", agenteHandler.Perguntar)
 		})
 	})
 

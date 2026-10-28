@@ -12,6 +12,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AgenteMensagen struct {
+	ID              uuid.UUID `json:"id"`
+	SessaoID        uuid.UUID `json:"sessao_id"`
+	Papel           string    `json:"papel"`
+	Conteudo        string    `json:"conteudo"`
+	ContextoUsado   []byte    `json:"contexto_usado"`
+	TokensEstimados int32     `json:"tokens_estimados"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type AgenteSesso struct {
+	ID        uuid.UUID `json:"id"`
+	EmpresaID uuid.UUID `json:"empresa_id"`
+	LojaID    uuid.UUID `json:"loja_id"`
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	Titulo    string    `json:"titulo"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Auditorium struct {
 	ID         int64       `json:"id"`
 	EmpresaID  pgtype.UUID `json:"empresa_id"`
