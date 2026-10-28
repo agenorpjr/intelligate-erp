@@ -75,6 +75,9 @@ func main() {
 	categoriaFinanceiraRepo := db.NewCategoriaFinanceiraRepository(dbpool)
 	movimentacaoCaixaRepo := db.NewMovimentacaoCaixaRepository(dbpool)
 
+	// Dashboard (Etapa 11) repository
+	dashboardRepo := db.NewDashboardRepository(dbpool)
+
 	// Initialize crypto service
 	cryptoService, err := crypto.NewCryptoServiceFromEnv()
 	if err != nil {
@@ -126,6 +129,9 @@ func main() {
 	dreUsecase := usecase.NewDREGerencialUsecase(movimentacaoCaixaRepo, contaGerencialRepo)
 	fluxoCaixaUsecase := usecase.NewFluxoCaixaUsecase(movimentacaoCaixaRepo, contaGerencialRepo, lojaRepo)
 
+	// Dashboard (Etapa 11) usecase
+	dashboardUsecase := usecase.NewDashboardUsecase(dashboardRepo, lojaRepo)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
@@ -149,6 +155,9 @@ func main() {
 	movimentacaoCaixaHandler := httpadapter.NewMovimentacaoCaixaHandler(movimentacaoCaixaUsecase)
 	dreHandler := httpadapter.NewDREGerencialHandler(dreUsecase)
 	fluxoCaixaHandler := httpadapter.NewFluxoCaixaHandler(fluxoCaixaUsecase)
+
+	// Dashboard (Etapa 11) handler
+	dashboardHandler := httpadapter.NewDashboardHandler(dashboardUsecase)
 
 	// Create router
 	r := chi.NewRouter()
@@ -285,6 +294,9 @@ func main() {
 
 			// Financeiro (Etapa 10) - Fluxo de Caixa
 			r.Get("/fluxo-caixa", fluxoCaixaHandler.GetFluxoCaixa)
+
+			// Dashboard (Etapa 11) - Indicadores por loja e período
+			r.Get("/dashboard", dashboardHandler.GetDashboard)
 		})
 	})
 

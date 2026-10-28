@@ -106,6 +106,34 @@ type Querier interface {
 	// DRE Gerencial
 	// ============================================================
 	GetDREGerencialReceitas(ctx context.Context, arg GetDREGerencialReceitasParams) ([]GetDREGerencialReceitasRow, error)
+	GetDashboardCMVPorDia(ctx context.Context, arg GetDashboardCMVPorDiaParams) ([]GetDashboardCMVPorDiaRow, error)
+	GetDashboardCMVPorProduto(ctx context.Context, arg GetDashboardCMVPorProdutoParams) ([]GetDashboardCMVPorProdutoRow, error)
+	// ============================================================
+	// CMV
+	// ============================================================
+	GetDashboardCMVResumo(ctx context.Context, arg GetDashboardCMVResumoParams) (GetDashboardCMVResumoRow, error)
+	GetDashboardContasPagarResumo(ctx context.Context, arg GetDashboardContasPagarResumoParams) (GetDashboardContasPagarResumoRow, error)
+	GetDashboardDespesasPorCategoria(ctx context.Context, arg GetDashboardDespesasPorCategoriaParams) ([]GetDashboardDespesasPorCategoriaRow, error)
+	// ============================================================
+	// Financeiro
+	// ============================================================
+	GetDashboardFinanceiroResumo(ctx context.Context, arg GetDashboardFinanceiroResumoParams) (GetDashboardFinanceiroResumoRow, error)
+	GetDashboardFluxoCaixaPorDia(ctx context.Context, arg GetDashboardFluxoCaixaPorDiaParams) ([]GetDashboardFluxoCaixaPorDiaRow, error)
+	GetDashboardProdutosSemFichaTecnica(ctx context.Context, arg GetDashboardProdutosSemFichaTecnicaParams) ([]GetDashboardProdutosSemFichaTecnicaRow, error)
+	// ============================================================
+	// Totais por tipo de conta gerencial (base para o DRE)
+	// ============================================================
+	GetDashboardTotaisPorTipoContaGerencial(ctx context.Context, arg GetDashboardTotaisPorTipoContaGerencialParams) ([]GetDashboardTotaisPorTipoContaGerencialRow, error)
+	GetDashboardVendasPorDia(ctx context.Context, arg GetDashboardVendasPorDiaParams) ([]GetDashboardVendasPorDiaRow, error)
+	GetDashboardVendasPorStatus(ctx context.Context, arg GetDashboardVendasPorStatusParams) ([]GetDashboardVendasPorStatusRow, error)
+	// ============================================================
+	// Dashboard Operacional
+	// ============================================================
+	// Indicadores consolidados por loja e período.
+	// Valores monetários e percentuais são convertidos para float8
+	// de forma explícita para que o sqlc gere tipos float64.
+	GetDashboardVendasResumo(ctx context.Context, arg GetDashboardVendasResumoParams) (GetDashboardVendasResumoRow, error)
+	GetDashboardVendasResumoPeriodoAnterior(ctx context.Context, arg GetDashboardVendasResumoPeriodoAnteriorParams) (GetDashboardVendasResumoPeriodoAnteriorRow, error)
 	GetEmpresa(ctx context.Context, id uuid.UUID) (Empresa, error)
 	GetEmpresaByCNPJ(ctx context.Context, cnpj string) (Empresa, error)
 	GetEventoIngestao(ctx context.Context, id uuid.UUID) (EventosIngestao, error)

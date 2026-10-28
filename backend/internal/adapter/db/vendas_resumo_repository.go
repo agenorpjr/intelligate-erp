@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"math/big"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,43 +40,10 @@ func (r *VendasResumoRepository) GetResumo(ctx context.Context, empresaID uuid.U
 		return nil, err
 	}
 
-	totalVendas := 0.0
-	if result.TotalVendas != nil {
-		switch v := result.TotalVendas.(type) {
-		case *big.Int:
-			if v != nil {
-				totalVendas = float64(v.Int64()) / 10000
-			}
-		case float64:
-			totalVendas = v
-		case int64:
-			totalVendas = float64(v) / 10000
-		}
-	}
-
-	ticketMedio := 0.0
-	if result.TicketMedio != 0 {
-		ticketMedio = float64(result.TicketMedio) / 10000
-	}
-
-	totalDescontos := 0.0
-	if result.TotalDescontos != nil {
-		switch v := result.TotalDescontos.(type) {
-		case *big.Int:
-			if v != nil {
-				totalDescontos = float64(v.Int64()) / 10000
-			}
-		case float64:
-			totalDescontos = v
-		case int64:
-			totalDescontos = float64(v) / 10000
-		}
-	}
-
 	return &domain.VendasResumo{
-		TotalVendas:    totalVendas,
+		TotalVendas:    float64FromInterface(result.TotalVendas),
 		TotalPedidos:   result.TotalPedidos,
-		TicketMedio:    ticketMedio,
-		TotalDescontos: totalDescontos,
+		TicketMedio:    float64FromInterface(result.TicketMedio),
+		TotalDescontos: float64FromInterface(result.TotalDescontos),
 	}, nil
 }

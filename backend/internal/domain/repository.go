@@ -293,3 +293,8 @@ type DREGerencialRepository interface {
 type FluxoCaixaRepository interface {
 	GetFluxoCaixa(ctx context.Context, empresaID uuid.UUID, lojaID *uuid.UUID, dataInicio, dataFim time.Time) (*FluxoCaixa, error)
 }
+
+// Dashboard repository
+type DashboardRepository interface {
+	GetDashboard(ctx context.Context, req DashboardRequest) (*DashboardResponse, error)
+}

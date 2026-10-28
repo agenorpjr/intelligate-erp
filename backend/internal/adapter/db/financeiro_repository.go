@@ -661,6 +661,8 @@ func numericFromFloat(f float64) pgtype.Numeric {
 	return pgtype.Numeric{Int: scaled, Exp: -4, Valid: true}
 }
 
+// float64FromInterface converte o valor retornado pelo pgx para float64.
+// Colunas NUMERIC escaneadas em interface{} chegam como pgtype.Numeric.
 func float64FromInterface(v interface{}) float64 {
 	if v == nil {
 		return 0
@@ -674,12 +676,35 @@ func float64FromInterface(v interface{}) float64 {
 		return float64(val)
 	case int:
 		return float64(val)
+	case pgtype.Numeric:
+		return numericToFloat64(val)
+	case *pgtype.Numeric:
+		if val == nil {
+			return 0
+		}
+		return numericToFloat64(*val)
 	case *big.Float:
+		if val == nil {
+			return 0
+		}
 		f, _ := val.Float64()
 		return f
 	default:
 		return 0
 	}
+}
+
+// numericToFloat64 converte um pgtype.Numeric em float64, retornando 0
+// quando o valor é nulo ou não pode ser representado.
+func numericToFloat64(n pgtype.Numeric) float64 {
+	if !n.Valid {
+		return 0
+	}
+	f, err := n.Float64Value()
+	if err != nil || !f.Valid {
+		return 0
+	}
+	return f.Float64
 }
 
 func timestamptzPtr(t pgtype.Timestamptz) *time.Time {
