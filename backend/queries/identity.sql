@@ -74,19 +74,22 @@ UPDATE usuarios SET ultimo_login = NOW(), updated_at = NOW() WHERE id = $1;
 UPDATE usuarios SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1;
 
 -- name: CreatePapel :one
-INSERT INTO papeis (empresa_id, nome, descricao, sistema)
-VALUES ($1, $2, $3, $4)
+INSERT INTO papeis (empresa_id, nome, codigo, descricao, sistema)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetPapel :one
 SELECT * FROM papeis WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: GetPapelByCodigo :one
+SELECT * FROM papeis WHERE codigo = $1 AND empresa_id = $2 AND deleted_at IS NULL;
 
 -- name: ListPapeisByEmpresa :many
 SELECT * FROM papeis WHERE empresa_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3;
 
 -- name: UpdatePapel :one
 UPDATE papeis
-SET nome = $2, descricao = $3, sistema = $4, updated_at = NOW()
+SET nome = $2, codigo = $3, descricao = $4, sistema = $5, updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
@@ -179,3 +182,44 @@ ORDER BY u.created_at DESC;
 
 -- name: CheckUsuarioLoja :one
 SELECT 1 FROM usuario_lojas WHERE usuario_id = $1 AND loja_id = $2;
+
+-- ===== Senha Redefinicao =====
+
+-- name: CreateSenhaRedefinicao :one
+INSERT INTO senha_redefinicoes (usuario_id, token_hash, expira_em)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: GetSenhaRedefinicaoByTokenHash :one
+SELECT * FROM senha_redefinicoes WHERE token_hash = $1 AND usado = false AND expira_em > NOW();
+
+-- name: InvalidateSenhaRedefinicoesByUsuario :exec
+UPDATE senha_redefinicoes SET usado = true, usado_em = NOW() WHERE usuario_id = $1 AND usado = false;
+
+-- name: MarcarSenhaRedefinicaoUsada :exec
+UPDATE senha_redefinicoes SET usado = true, usado_em = NOW() WHERE id = $1;
+
+-- name: ListSenhaRedefinicoesValidasPorUsuario :many
+SELECT * FROM senha_redefinicoes WHERE usuario_id = $1 AND usado = false AND expira_em > NOW();
+
+-- ===== Sessao Revogada =====
+
+-- name: CreateSessaoRevogada :one
+INSERT INTO sessoes_revogadas (usuario_id, jti, expira_em, motivo)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: GetSessaoRevogadaByJTI :one
+SELECT * FROM sessoes_revogadas WHERE jti = $1 AND expira_em > NOW();
+
+-- name: RevogarSessoesPorUsuario :exec
+UPDATE sessoes_revogadas SET expira_em = NOW() WHERE usuario_id = $1 AND expira_em > NOW();
+
+-- name: RevogarSessoesPorUsuarioExcetoJTI :exec
+UPDATE sessoes_revogadas SET expira_em = NOW() WHERE usuario_id = $1 AND expira_em > NOW() AND jti <> $2;
+
+-- name: ListSessoesRevogadasAtivasPorUsuario :many
+SELECT * FROM sessoes_revogadas WHERE usuario_id = $1 AND expira_em > NOW();
+
+-- name: LimparSessoesRevogadasExpiradas :exec
+DELETE FROM sessoes_revogadas WHERE expira_em <= NOW();

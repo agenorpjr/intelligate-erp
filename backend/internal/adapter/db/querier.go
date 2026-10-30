@@ -69,6 +69,10 @@ type Querier interface {
 	CreateProdutoCanonico(ctx context.Context, arg CreateProdutoCanonicoParams) (ProdutosCanonico, error)
 	CreateRecebimentoCompra(ctx context.Context, arg CreateRecebimentoCompraParams) (RecebimentosCompra, error)
 	CreateRecebimentoCompraItem(ctx context.Context, arg CreateRecebimentoCompraItemParams) (RecebimentoCompraIten, error)
+	// ===== Senha Redefinicao =====
+	CreateSenhaRedefinicao(ctx context.Context, arg CreateSenhaRedefinicaoParams) (SenhaRedefinico, error)
+	// ===== Sessao Revogada =====
+	CreateSessaoRevogada(ctx context.Context, arg CreateSessaoRevogadaParams) (SessoesRevogada, error)
 	CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (Usuario, error)
 	CreateUsuarioLoja(ctx context.Context, arg CreateUsuarioLojaParams) (UsuarioLoja, error)
 	CreateUsuarioPapel(ctx context.Context, arg CreateUsuarioPapelParams) (UsuariosPapei, error)
@@ -182,6 +186,7 @@ type Querier interface {
 	GetOrdemCompraItem(ctx context.Context, id uuid.UUID) (OrdemCompraIten, error)
 	GetOrdemCompraWithItens(ctx context.Context, id uuid.UUID) ([]GetOrdemCompraWithItensRow, error)
 	GetPapel(ctx context.Context, id uuid.UUID) (Papei, error)
+	GetPapelByCodigo(ctx context.Context, arg GetPapelByCodigoParams) (Papei, error)
 	GetPdvIntegracao(ctx context.Context, id uuid.UUID) (PdvIntegraco, error)
 	GetPdvIntegracaoByLojaProvedor(ctx context.Context, arg GetPdvIntegracaoByLojaProvedorParams) (PdvIntegraco, error)
 	GetPdvOrigem(ctx context.Context, id uuid.UUID) (PdvsOrigem, error)
@@ -200,6 +205,8 @@ type Querier interface {
 	GetRecebimentoCompra(ctx context.Context, id uuid.UUID) (RecebimentosCompra, error)
 	GetResumoPerdasEstoque(ctx context.Context, arg GetResumoPerdasEstoqueParams) ([]GetResumoPerdasEstoqueRow, error)
 	GetSaldoPeriodo(ctx context.Context, arg GetSaldoPeriodoParams) (interface{}, error)
+	GetSenhaRedefinicaoByTokenHash(ctx context.Context, tokenHash string) (SenhaRedefinico, error)
+	GetSessaoRevogadaByJTI(ctx context.Context, jti string) (SessoesRevogada, error)
 	GetTotaisPorCategoriaFinanceira(ctx context.Context, arg GetTotaisPorCategoriaFinanceiraParams) ([]GetTotaisPorCategoriaFinanceiraRow, error)
 	GetTotaisPorContaGerencial(ctx context.Context, arg GetTotaisPorContaGerencialParams) ([]GetTotaisPorContaGerencialRow, error)
 	GetUsuario(ctx context.Context, id uuid.UUID) (Usuario, error)
@@ -210,6 +217,8 @@ type Querier interface {
 	GetVendasResumo(ctx context.Context, arg GetVendasResumoParams) (GetVendasResumoRow, error)
 	// Health check query
 	HealthCheck(ctx context.Context) (int32, error)
+	InvalidateSenhaRedefinicoesByUsuario(ctx context.Context, usuarioID uuid.UUID) error
+	LimparSessoesRevogadasExpiradas(ctx context.Context) error
 	ListAgenteMensagensBySessao(ctx context.Context, sessaoID uuid.UUID) ([]AgenteMensagen, error)
 	ListAgenteSessoes(ctx context.Context, arg ListAgenteSessoesParams) ([]AgenteSesso, error)
 	ListAuditoria(ctx context.Context, arg ListAuditoriaParams) ([]Auditorium, error)
@@ -255,9 +264,14 @@ type Querier interface {
 	ListRecebimentoCompraItensByRecebimento(ctx context.Context, recebimentoCompraID uuid.UUID) ([]RecebimentoCompraIten, error)
 	ListRecebimentosCompraByFilter(ctx context.Context, arg ListRecebimentosCompraByFilterParams) ([]RecebimentosCompra, error)
 	ListRecebimentosCompraByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]RecebimentosCompra, error)
+	ListSenhaRedefinicoesValidasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]SenhaRedefinico, error)
+	ListSessoesRevogadasAtivasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]SessoesRevogada, error)
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
 	ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]Usuario, error)
+	MarcarSenhaRedefinicaoUsada(ctx context.Context, id uuid.UUID) error
+	RevogarSessoesPorUsuario(ctx context.Context, usuarioID uuid.UUID) error
+	RevogarSessoesPorUsuarioExcetoJTI(ctx context.Context, arg RevogarSessoesPorUsuarioExcetoJTIParams) error
 	UpdateAgenteSessaoStatus(ctx context.Context, arg UpdateAgenteSessaoStatusParams) error
 	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
 	UpdateCategoriaFinanceira(ctx context.Context, arg UpdateCategoriaFinanceiraParams) (CategoriasFinanceira, error)

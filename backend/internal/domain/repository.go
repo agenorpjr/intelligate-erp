@@ -333,3 +333,21 @@ type AgenteRepository interface {
 	CreateMensagem(ctx context.Context, m *AgenteMensagem) error
 	ListMensagensBySessao(ctx context.Context, sessaoID uuid.UUID) ([]*AgenteMensagem, error)
 }
+
+// SenhaRedefinicaoRepository gerencia tokens de redefinicao de senha.
+type SenhaRedefinicaoRepository interface {
+	Create(ctx context.Context, s *SenhaRedefinicao) error
+	GetByTokenHash(ctx context.Context, tokenHash string) (*SenhaRedefinicao, error)
+	InvalidarPorUsuario(ctx context.Context, usuarioID uuid.UUID) error
+	MarcarUsado(ctx context.Context, id uuid.UUID) error
+	ListarValidasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]*SenhaRedefinicao, error)
+}
+
+// SessaoRevogadaRepository gerencia tokens JWT revogados (logout).
+type SessaoRevogadaRepository interface {
+	Create(ctx context.Context, s *SessaoRevogada) error
+	ExistePorJTI(ctx context.Context, jti string) (bool, error)
+	RevogarPorUsuario(ctx context.Context, usuarioID uuid.UUID, excecaoJTI *string, motivo string) error
+	ListarAtivasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]*SessaoRevogada, error)
+	LimparExpiradas(ctx context.Context) error
+}

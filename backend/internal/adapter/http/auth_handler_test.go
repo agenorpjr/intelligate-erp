@@ -121,14 +121,22 @@ func TestAuthHandler_MinhasPermissoes(t *testing.T) {
 		{ID: uuid.New(), UsuarioID: usuarioID, PapelID: papelID},
 	}}
 	papelRepo := &authMockPapelRepo{papeis: map[uuid.UUID]*domain.Papel{
-		papelID: {ID: papelID, EmpresaID: empresaID, Nome: "Admin"},
+		papelID: {ID: papelID, EmpresaID: empresaID, Nome: "Admin", Codigo: "ADMIN"},
 	}}
 	ppRepo := &authMockPapelPermissaoRepo{porPapel: map[uuid.UUID][]*domain.Permissao{
 		papelID: {{Chave: domain.PermLojasListar}, {Chave: domain.PermDashboardVer}},
 	}}
 
 	uc := usecase.NewAuthUsecase(usuarioRepo, upRepo, papelRepo, ppRepo, "secret", time.Hour)
-	handler := NewAuthHandler(uc)
+	senhaSessaoUC := usecase.NewSenhaSessaoUsecase(
+		usuarioRepo,
+		&mockSenhaRedefinicaoRepoForHandler{},
+		&mockSessaoRevogadaRepoForHandler{},
+		&mockAuditoriaRepoForHandler{},
+		"development",
+		true,
+	)
+	handler := NewAuthHandler(uc, senhaSessaoUC)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/me/permissoes", nil)
 	ctx := context.WithValue(req.Context(), UserContextKey, &domain.Usuario{ID: usuarioID, EmpresaID: empresaID})
@@ -147,11 +155,64 @@ func TestAuthHandler_MinhasPermissoes(t *testing.T) {
 
 func TestAuthHandler_MinhasPermissoes_SemUsuario(t *testing.T) {
 	uc := usecase.NewAuthUsecase(&authMockUsuarioRepo{}, &authMockUsuarioPapelRepo{}, &authMockPapelRepo{}, &authMockPapelPermissaoRepo{}, "secret", time.Hour)
-	handler := NewAuthHandler(uc)
+	senhaSessaoUC := usecase.NewSenhaSessaoUsecase(
+		&authMockUsuarioRepo{},
+		&mockSenhaRedefinicaoRepoForHandler{},
+		&mockSessaoRevogadaRepoForHandler{},
+		&mockAuditoriaRepoForHandler{},
+		"development",
+		true,
+	)
+	handler := NewAuthHandler(uc, senhaSessaoUC)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/me/permissoes", nil)
 	rr := httptest.NewRecorder()
 	handler.MinhasPermissoes(rr, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+// --- Mocks auxiliares para o handler ---
+
+type mockSenhaRedefinicaoRepoForHandler struct{}
+
+func (m *mockSenhaRedefinicaoRepoForHandler) Create(ctx context.Context, s *domain.SenhaRedefinicao) error {
+	return nil
+}
+func (m *mockSenhaRedefinicaoRepoForHandler) GetByTokenHash(ctx context.Context, tokenHash string) (*domain.SenhaRedefinicao, error) {
+	return nil, nil
+}
+func (m *mockSenhaRedefinicaoRepoForHandler) InvalidarPorUsuario(ctx context.Context, usuarioID uuid.UUID) error {
+	return nil
+}
+func (m *mockSenhaRedefinicaoRepoForHandler) MarcarUsado(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+func (m *mockSenhaRedefinicaoRepoForHandler) ListarValidasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]*domain.SenhaRedefinicao, error) {
+	return nil, nil
+}
+
+type mockSessaoRevogadaRepoForHandler struct{}
+
+func (m *mockSessaoRevogadaRepoForHandler) Create(ctx context.Context, s *domain.SessaoRevogada) error {
+	return nil
+}
+func (m *mockSessaoRevogadaRepoForHandler) ExistePorJTI(ctx context.Context, jti string) (bool, error) {
+	return false, nil
+}
+func (m *mockSessaoRevogadaRepoForHandler) RevogarPorUsuario(ctx context.Context, usuarioID uuid.UUID, excecaoJTI *string, motivo string) error {
+	return nil
+}
+func (m *mockSessaoRevogadaRepoForHandler) ListarAtivasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]*domain.SessaoRevogada, error) {
+	return nil, nil
+}
+func (m *mockSessaoRevogadaRepoForHandler) LimparExpiradas(ctx context.Context) error { return nil }
+
+type mockAuditoriaRepoForHandler struct{}
+
+func (m *mockAuditoriaRepoForHandler) Create(ctx context.Context, a *domain.Auditoria) error {
+	return nil
+}
+func (m *mockAuditoriaRepoForHandler) List(ctx context.Context, filter domain.AuditoriaFilter) ([]*domain.Auditoria, error) {
+	return nil, nil
 }

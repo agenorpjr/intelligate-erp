@@ -299,6 +299,7 @@ type Papei struct {
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	Codigo    pgtype.Text        `json:"codigo"`
 }
 
 type PapeisPermisso struct {
@@ -445,6 +446,25 @@ type RecebimentosCompra struct {
 	PermitirExcedente bool        `json:"permitir_excedente"`
 	CreatedAt         time.Time   `json:"created_at"`
 	UpdatedAt         time.Time   `json:"updated_at"`
+}
+
+type SenhaRedefinico struct {
+	ID        uuid.UUID          `json:"id"`
+	UsuarioID uuid.UUID          `json:"usuario_id"`
+	TokenHash string             `json:"token_hash"`
+	Usado     bool               `json:"usado"`
+	ExpiraEm  time.Time          `json:"expira_em"`
+	CriadoEm  time.Time          `json:"criado_em"`
+	UsadoEm   pgtype.Timestamptz `json:"usado_em"`
+}
+
+type SessoesRevogada struct {
+	ID         uuid.UUID `json:"id"`
+	UsuarioID  uuid.UUID `json:"usuario_id"`
+	Jti        string    `json:"jti"`
+	ExpiraEm   time.Time `json:"expira_em"`
+	RevogadoEm time.Time `json:"revogado_em"`
+	Motivo     string    `json:"motivo"`
 }
 
 type Usuario struct {

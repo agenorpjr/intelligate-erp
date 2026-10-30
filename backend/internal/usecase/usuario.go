@@ -528,7 +528,7 @@ func (uc *UsuarioUsecase) verificarUltimoAdminAtivo(ctx context.Context, empresa
 
 	var papelAdminID *uuid.UUID
 	for _, p := range papeis {
-		if p.Nome == "ADMIN" || p.Nome == "Admin" || p.Nome == "admin" {
+		if p.Codigo == domain.CodigoPadraoAdmin {
 			papelAdminID = &p.ID
 			break
 		}
@@ -573,7 +573,7 @@ func (uc *UsuarioUsecase) verificarUltimoAdminAtivo(ctx context.Context, empresa
 
 func (uc *UsuarioUsecase) verificarUltimoAdminAtivoAoRemoverPapel(ctx context.Context, usuarioID uuid.UUID, papel *domain.Papel) error {
 	// Se não é papel ADMIN, não precisa verificar
-	if papel.Nome != "ADMIN" && papel.Nome != "Admin" && papel.Nome != "admin" {
+	if papel.Codigo != domain.CodigoPadraoAdmin {
 		return nil
 	}
 

@@ -177,12 +177,12 @@ func getOrCreatePermissoes(ctx context.Context, repo *db.PermissaoRepository) (m
 }
 
 func getOrCreatePapelAdmin(ctx context.Context, papelRepo *db.PapelRepository, empresaID uuid.UUID, permissaoRepo *db.PermissaoRepository, papelPermissaoRepo *db.PapelPermissaoRepository, permissoes map[string]*domain.Permissao) (*domain.Papel, error) {
-	// Try to find existing ADMIN role
+	// Try to find existing ADMIN role by codigo
 	var papelAdmin *domain.Papel
 	papeis, err := papelRepo.ListByEmpresa(ctx, empresaID, 100, 0)
 	if err == nil {
 		for _, p := range papeis {
-			if p.Nome == "ADMIN" {
+			if p.Codigo == domain.CodigoPadraoAdmin {
 				papelAdmin = p
 				break
 			}
@@ -195,6 +195,7 @@ func getOrCreatePapelAdmin(ctx context.Context, papelRepo *db.PapelRepository, e
 		papelAdmin = &domain.Papel{
 			EmpresaID: empresaID,
 			Nome:      "ADMIN",
+			Codigo:    domain.CodigoPadraoAdmin,
 			Descricao: &descricao,
 			Sistema:   true,
 		}

@@ -23,9 +23,14 @@ func (r *PapelRepository) Create(ctx context.Context, p *domain.Papel) error {
 	if p.Descricao != nil {
 		descricao = pgtype.Text{String: *p.Descricao, Valid: true}
 	}
+	var codigo pgtype.Text
+	if p.Codigo != "" {
+		codigo = pgtype.Text{String: p.Codigo, Valid: true}
+	}
 	params := CreatePapelParams{
 		EmpresaID: p.EmpresaID,
 		Nome:      p.Nome,
+		Codigo:    codigo,
 		Descricao: descricao,
 		Sistema:   p.Sistema,
 	}
@@ -34,6 +39,7 @@ func (r *PapelRepository) Create(ctx context.Context, p *domain.Papel) error {
 		return err
 	}
 	p.ID = result.ID
+	p.Codigo = result.Codigo.String
 	p.CreatedAt = result.CreatedAt
 	p.UpdatedAt = result.UpdatedAt
 	return nil
@@ -68,9 +74,14 @@ func (r *PapelRepository) Update(ctx context.Context, p *domain.Papel) error {
 	if p.Descricao != nil {
 		descricao = pgtype.Text{String: *p.Descricao, Valid: true}
 	}
+	var codigo pgtype.Text
+	if p.Codigo != "" {
+		codigo = pgtype.Text{String: p.Codigo, Valid: true}
+	}
 	params := UpdatePapelParams{
 		ID:        p.ID,
 		Nome:      p.Nome,
+		Codigo:    codigo,
 		Descricao: descricao,
 		Sistema:   p.Sistema,
 	}
@@ -99,6 +110,7 @@ func toDomainPapel(p Papei) *domain.Papel {
 		ID:        p.ID,
 		EmpresaID: p.EmpresaID,
 		Nome:      p.Nome,
+		Codigo:    p.Codigo.String,
 		Descricao: descricao,
 		Sistema:   p.Sistema,
 		CreatedAt: p.CreatedAt,

@@ -143,14 +143,15 @@ func (q *Queries) CreateLoja(ctx context.Context, arg CreateLojaParams) (Loja, e
 }
 
 const createPapel = `-- name: CreatePapel :one
-INSERT INTO papeis (empresa_id, nome, descricao, sistema)
-VALUES ($1, $2, $3, $4)
-RETURNING id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at
+INSERT INTO papeis (empresa_id, nome, codigo, descricao, sistema)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at, codigo
 `
 
 type CreatePapelParams struct {
 	EmpresaID uuid.UUID   `json:"empresa_id"`
 	Nome      string      `json:"nome"`
+	Codigo    pgtype.Text `json:"codigo"`
 	Descricao pgtype.Text `json:"descricao"`
 	Sistema   bool        `json:"sistema"`
 }
@@ -159,6 +160,7 @@ func (q *Queries) CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei
 	row := q.db.QueryRow(ctx, createPapel,
 		arg.EmpresaID,
 		arg.Nome,
+		arg.Codigo,
 		arg.Descricao,
 		arg.Sistema,
 	)
@@ -172,6 +174,7 @@ func (q *Queries) CreatePapel(ctx context.Context, arg CreatePapelParams) (Papei
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Codigo,
 	)
 	return i, err
 }
@@ -211,6 +214,69 @@ func (q *Queries) CreatePermissao(ctx context.Context, arg CreatePermissaoParams
 		&i.Chave,
 		&i.Descricao,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createSenhaRedefinicao = `-- name: CreateSenhaRedefinicao :one
+
+INSERT INTO senha_redefinicoes (usuario_id, token_hash, expira_em)
+VALUES ($1, $2, $3)
+RETURNING id, usuario_id, token_hash, usado, expira_em, criado_em, usado_em
+`
+
+type CreateSenhaRedefinicaoParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	TokenHash string    `json:"token_hash"`
+	ExpiraEm  time.Time `json:"expira_em"`
+}
+
+// ===== Senha Redefinicao =====
+func (q *Queries) CreateSenhaRedefinicao(ctx context.Context, arg CreateSenhaRedefinicaoParams) (SenhaRedefinico, error) {
+	row := q.db.QueryRow(ctx, createSenhaRedefinicao, arg.UsuarioID, arg.TokenHash, arg.ExpiraEm)
+	var i SenhaRedefinico
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.TokenHash,
+		&i.Usado,
+		&i.ExpiraEm,
+		&i.CriadoEm,
+		&i.UsadoEm,
+	)
+	return i, err
+}
+
+const createSessaoRevogada = `-- name: CreateSessaoRevogada :one
+
+INSERT INTO sessoes_revogadas (usuario_id, jti, expira_em, motivo)
+VALUES ($1, $2, $3, $4)
+RETURNING id, usuario_id, jti, expira_em, revogado_em, motivo
+`
+
+type CreateSessaoRevogadaParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	Jti       string    `json:"jti"`
+	ExpiraEm  time.Time `json:"expira_em"`
+	Motivo    string    `json:"motivo"`
+}
+
+// ===== Sessao Revogada =====
+func (q *Queries) CreateSessaoRevogada(ctx context.Context, arg CreateSessaoRevogadaParams) (SessoesRevogada, error) {
+	row := q.db.QueryRow(ctx, createSessaoRevogada,
+		arg.UsuarioID,
+		arg.Jti,
+		arg.ExpiraEm,
+		arg.Motivo,
+	)
+	var i SessoesRevogada
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.Jti,
+		&i.ExpiraEm,
+		&i.RevogadoEm,
+		&i.Motivo,
 	)
 	return i, err
 }
@@ -435,7 +501,7 @@ func (q *Queries) GetLoja(ctx context.Context, id uuid.UUID) (Loja, error) {
 }
 
 const getPapel = `-- name: GetPapel :one
-SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at FROM papeis WHERE id = $1 AND deleted_at IS NULL
+SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at, codigo FROM papeis WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetPapel(ctx context.Context, id uuid.UUID) (Papei, error) {
@@ -450,6 +516,33 @@ func (q *Queries) GetPapel(ctx context.Context, id uuid.UUID) (Papei, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Codigo,
+	)
+	return i, err
+}
+
+const getPapelByCodigo = `-- name: GetPapelByCodigo :one
+SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at, codigo FROM papeis WHERE codigo = $1 AND empresa_id = $2 AND deleted_at IS NULL
+`
+
+type GetPapelByCodigoParams struct {
+	Codigo    pgtype.Text `json:"codigo"`
+	EmpresaID uuid.UUID   `json:"empresa_id"`
+}
+
+func (q *Queries) GetPapelByCodigo(ctx context.Context, arg GetPapelByCodigoParams) (Papei, error) {
+	row := q.db.QueryRow(ctx, getPapelByCodigo, arg.Codigo, arg.EmpresaID)
+	var i Papei
+	err := row.Scan(
+		&i.ID,
+		&i.EmpresaID,
+		&i.Nome,
+		&i.Descricao,
+		&i.Sistema,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Codigo,
 	)
 	return i, err
 }
@@ -482,6 +575,43 @@ func (q *Queries) GetPermissaoByChave(ctx context.Context, chave string) (Permis
 		&i.Chave,
 		&i.Descricao,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getSenhaRedefinicaoByTokenHash = `-- name: GetSenhaRedefinicaoByTokenHash :one
+SELECT id, usuario_id, token_hash, usado, expira_em, criado_em, usado_em FROM senha_redefinicoes WHERE token_hash = $1 AND usado = false AND expira_em > NOW()
+`
+
+func (q *Queries) GetSenhaRedefinicaoByTokenHash(ctx context.Context, tokenHash string) (SenhaRedefinico, error) {
+	row := q.db.QueryRow(ctx, getSenhaRedefinicaoByTokenHash, tokenHash)
+	var i SenhaRedefinico
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.TokenHash,
+		&i.Usado,
+		&i.ExpiraEm,
+		&i.CriadoEm,
+		&i.UsadoEm,
+	)
+	return i, err
+}
+
+const getSessaoRevogadaByJTI = `-- name: GetSessaoRevogadaByJTI :one
+SELECT id, usuario_id, jti, expira_em, revogado_em, motivo FROM sessoes_revogadas WHERE jti = $1 AND expira_em > NOW()
+`
+
+func (q *Queries) GetSessaoRevogadaByJTI(ctx context.Context, jti string) (SessoesRevogada, error) {
+	row := q.db.QueryRow(ctx, getSessaoRevogadaByJTI, jti)
+	var i SessoesRevogada
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.Jti,
+		&i.ExpiraEm,
+		&i.RevogadoEm,
+		&i.Motivo,
 	)
 	return i, err
 }
@@ -572,6 +702,24 @@ func (q *Queries) GetUsuarioPapel(ctx context.Context, id uuid.UUID) (UsuariosPa
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const invalidateSenhaRedefinicoesByUsuario = `-- name: InvalidateSenhaRedefinicoesByUsuario :exec
+UPDATE senha_redefinicoes SET usado = true, usado_em = NOW() WHERE usuario_id = $1 AND usado = false
+`
+
+func (q *Queries) InvalidateSenhaRedefinicoesByUsuario(ctx context.Context, usuarioID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, invalidateSenhaRedefinicoesByUsuario, usuarioID)
+	return err
+}
+
+const limparSessoesRevogadasExpiradas = `-- name: LimparSessoesRevogadasExpiradas :exec
+DELETE FROM sessoes_revogadas WHERE expira_em <= NOW()
+`
+
+func (q *Queries) LimparSessoesRevogadasExpiradas(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, limparSessoesRevogadasExpiradas)
+	return err
 }
 
 const listAuditoria = `-- name: ListAuditoria :many
@@ -749,7 +897,7 @@ func (q *Queries) ListLojasByUsuario(ctx context.Context, usuarioID uuid.UUID) (
 }
 
 const listPapeisByEmpresa = `-- name: ListPapeisByEmpresa :many
-SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at FROM papeis WHERE empresa_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3
+SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at, codigo FROM papeis WHERE empresa_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
 type ListPapeisByEmpresaParams struct {
@@ -776,6 +924,7 @@ func (q *Queries) ListPapeisByEmpresa(ctx context.Context, arg ListPapeisByEmpre
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Codigo,
 		); err != nil {
 			return nil, err
 		}
@@ -878,6 +1027,69 @@ func (q *Queries) ListPermissoesByUsuario(ctx context.Context, arg ListPermissoe
 			&i.Chave,
 			&i.Descricao,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSenhaRedefinicoesValidasPorUsuario = `-- name: ListSenhaRedefinicoesValidasPorUsuario :many
+SELECT id, usuario_id, token_hash, usado, expira_em, criado_em, usado_em FROM senha_redefinicoes WHERE usuario_id = $1 AND usado = false AND expira_em > NOW()
+`
+
+func (q *Queries) ListSenhaRedefinicoesValidasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]SenhaRedefinico, error) {
+	rows, err := q.db.Query(ctx, listSenhaRedefinicoesValidasPorUsuario, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SenhaRedefinico{}
+	for rows.Next() {
+		var i SenhaRedefinico
+		if err := rows.Scan(
+			&i.ID,
+			&i.UsuarioID,
+			&i.TokenHash,
+			&i.Usado,
+			&i.ExpiraEm,
+			&i.CriadoEm,
+			&i.UsadoEm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessoesRevogadasAtivasPorUsuario = `-- name: ListSessoesRevogadasAtivasPorUsuario :many
+SELECT id, usuario_id, jti, expira_em, revogado_em, motivo FROM sessoes_revogadas WHERE usuario_id = $1 AND expira_em > NOW()
+`
+
+func (q *Queries) ListSessoesRevogadasAtivasPorUsuario(ctx context.Context, usuarioID uuid.UUID) ([]SessoesRevogada, error) {
+	rows, err := q.db.Query(ctx, listSessoesRevogadasAtivasPorUsuario, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SessoesRevogada{}
+	for rows.Next() {
+		var i SessoesRevogada
+		if err := rows.Scan(
+			&i.ID,
+			&i.UsuarioID,
+			&i.Jti,
+			&i.ExpiraEm,
+			&i.RevogadoEm,
+			&i.Motivo,
 		); err != nil {
 			return nil, err
 		}
@@ -1014,6 +1226,38 @@ func (q *Queries) ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]U
 	return items, nil
 }
 
+const marcarSenhaRedefinicaoUsada = `-- name: MarcarSenhaRedefinicaoUsada :exec
+UPDATE senha_redefinicoes SET usado = true, usado_em = NOW() WHERE id = $1
+`
+
+func (q *Queries) MarcarSenhaRedefinicaoUsada(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, marcarSenhaRedefinicaoUsada, id)
+	return err
+}
+
+const revogarSessoesPorUsuario = `-- name: RevogarSessoesPorUsuario :exec
+UPDATE sessoes_revogadas SET expira_em = NOW() WHERE usuario_id = $1 AND expira_em > NOW()
+`
+
+func (q *Queries) RevogarSessoesPorUsuario(ctx context.Context, usuarioID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, revogarSessoesPorUsuario, usuarioID)
+	return err
+}
+
+const revogarSessoesPorUsuarioExcetoJTI = `-- name: RevogarSessoesPorUsuarioExcetoJTI :exec
+UPDATE sessoes_revogadas SET expira_em = NOW() WHERE usuario_id = $1 AND expira_em > NOW() AND jti <> $2
+`
+
+type RevogarSessoesPorUsuarioExcetoJTIParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	Jti       string    `json:"jti"`
+}
+
+func (q *Queries) RevogarSessoesPorUsuarioExcetoJTI(ctx context.Context, arg RevogarSessoesPorUsuarioExcetoJTIParams) error {
+	_, err := q.db.Exec(ctx, revogarSessoesPorUsuarioExcetoJTI, arg.UsuarioID, arg.Jti)
+	return err
+}
+
 const updateEmpresa = `-- name: UpdateEmpresa :one
 UPDATE empresas
 SET razao_social = $2, nome_fantasia = $3, ativo = $4, updated_at = NOW()
@@ -1092,14 +1336,15 @@ func (q *Queries) UpdateLoja(ctx context.Context, arg UpdateLojaParams) (Loja, e
 
 const updatePapel = `-- name: UpdatePapel :one
 UPDATE papeis
-SET nome = $2, descricao = $3, sistema = $4, updated_at = NOW()
+SET nome = $2, codigo = $3, descricao = $4, sistema = $5, updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at
+RETURNING id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at, codigo
 `
 
 type UpdatePapelParams struct {
 	ID        uuid.UUID   `json:"id"`
 	Nome      string      `json:"nome"`
+	Codigo    pgtype.Text `json:"codigo"`
 	Descricao pgtype.Text `json:"descricao"`
 	Sistema   bool        `json:"sistema"`
 }
@@ -1108,6 +1353,7 @@ func (q *Queries) UpdatePapel(ctx context.Context, arg UpdatePapelParams) (Papei
 	row := q.db.QueryRow(ctx, updatePapel,
 		arg.ID,
 		arg.Nome,
+		arg.Codigo,
 		arg.Descricao,
 		arg.Sistema,
 	)
@@ -1121,6 +1367,7 @@ func (q *Queries) UpdatePapel(ctx context.Context, arg UpdatePapelParams) (Papei
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Codigo,
 	)
 	return i, err
 }

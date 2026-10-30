@@ -57,6 +57,8 @@ func main() {
 	papelPermissaoRepo := db.NewPapelPermissaoRepository(dbpool)
 	permissaoRepo := db.NewPermissaoRepository(dbpool)
 	auditoriaRepo := db.NewAuditoriaRepository(dbpool)
+	senhaRedefinicaoRepo := db.NewSenhaRedefinicaoRepository(dbpool)
+	sessaoRevogadaRepo := db.NewSessaoRevogadaRepository(dbpool)
 	pdvOrigemRepo := db.NewPdvOrigemRepository(dbpool)
 	pdvIntegracaoRepo := db.NewPdvIntegracaoRepository(dbpool)
 	produtoCanonicoRepo := db.NewProdutoCanonicoRepository(dbpool)
@@ -98,6 +100,14 @@ func main() {
 
 	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(usuarioRepo, usuarioPapelRepo, papelRepo, papelPermissaoRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	senhaSessaoUsecase := usecase.NewSenhaSessaoUsecase(
+		usuarioRepo,
+		senhaRedefinicaoRepo,
+		sessaoRevogadaRepo,
+		auditoriaRepo,
+		cfg.AppEnv,
+		cfg.AppEnv == "development",
+	)
 	lojaUsecase := usecase.NewLojaUsecase(lojaRepo, empresaRepo, auditoriaRepo)
 	salesUsecase := usecase.NewSalesUsecase(
 		pdvOrigemRepo,
@@ -193,7 +203,7 @@ func main() {
 	)
 
 	// Initialize handlers
-	authHandler := httpadapter.NewAuthHandler(authUsecase)
+	authHandler := httpadapter.NewAuthHandler(authUsecase, senhaSessaoUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
 	usuarioHandler := httpadapter.NewUsuarioHandler(usuarioUsecase)
 	salesHandler := httpadapter.NewSalesHandler(salesUsecase)
@@ -202,7 +212,7 @@ func main() {
 	fichaTecnicaHandler := httpadapter.NewFichaTecnicaHandler(fichaTecnicaUsecase)
 	cmvHandler := httpadapter.NewCMVHandler(fichaTecnicaUsecase)
 	pdvIntegracaoHandler := httpadapter.NewPdvIntegracaoHandler(pdvIntegracaoUsecase)
-	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase)
+	authMiddleware := httpadapter.NewAuthMiddleware(authUsecase, senhaSessaoUsecase)
 	rbacMiddleware := httpadapter.NewRBACMiddleware(authUsecase)
 	papelPermissaoHandler := httpadapter.NewPapelPermissaoHandler(papelPermissaoUsecase)
 	auditoriaHandler := httpadapter.NewAuditoriaHandler(auditoriaUsecase)
@@ -246,12 +256,16 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes
 		r.Post("/auth/login", authHandler.Login)
+		r.Post("/auth/esqueci-senha", authHandler.EsqueciSenha)
+		r.Post("/auth/redefinir-senha", authHandler.RedefinirSenha)
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.RequireAuth)
 			r.Get("/me", authHandler.Me)
 			r.Get("/me/permissoes", authHandler.MinhasPermissoes)
+			r.Post("/auth/alterar-senha", authHandler.AlterarSenha)
+			r.Post("/auth/logout", authHandler.Logout)
 
 			// Lojas
 			r.Group(func(r chi.Router) {

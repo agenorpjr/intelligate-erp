@@ -87,6 +87,7 @@ func (uc *AuthUsecase) generateToken(usuario *domain.Usuario) (string, error) {
 		"sub":        usuario.ID.String(),
 		"empresa_id": usuario.EmpresaID.String(),
 		"email":      usuario.Email,
+		"jti":        uuid.New().String(),
 		"exp":        time.Now().Add(uc.jwtExpiry).Unix(),
 		"iat":        time.Now().Unix(),
 	}
@@ -243,4 +244,32 @@ func (uc *AuthUsecase) GetLojasUsuario(ctx context.Context, usuarioID, empresaID
 	}
 
 	return lojas, nil
+}
+
+// ExtrairJTI extrai o identificador único (JTI) de um token JWT.
+func (uc *AuthUsecase) ExtrairJTI(tokenString string) (string, error) {
+	_, claims, err := uc.ValidateToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return "", ErrTokenInvalido
+	}
+	return jti, nil
+}
+
+// ExtrairExpiracao extrai o tempo de expiração de um token JWT.
+func (uc *AuthUsecase) ExtrairExpiracao(tokenString string) (time.Time, error) {
+	_, claims, err := uc.ValidateToken(tokenString)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	expFloat, ok := claims["exp"].(float64)
+	if !ok {
+		return time.Time{}, ErrTokenInvalido
+	}
+	return time.Unix(int64(expFloat), 0), nil
 }

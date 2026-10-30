@@ -22,12 +22,15 @@ type Config struct {
 	EncryptionKeyBytes []byte
 
 	// Configuração do provedor de IA (Etapa 13).
-	// AIProvider: "openai", "anthropic" ou "mock".
 	// AIAPIKey nunca deve ser registrada em logs.
 	AIProvider string
 	AIAPIKey   string
 	AIModel    string
 	AIBaseURL  string
+
+	// Exibir token de redefinição de senha em desenvolvimento (Etapa 16).
+	// Em produção deve ser false; o token é enviado por e-mail.
+	ExibirTokenRedefinicaoDev bool
 }
 
 func Load() (*Config, error) {
@@ -60,19 +63,20 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/intelligate?sslmode=disable"),
-		AppEnv:             getEnv("APP_ENV", "development"),
-		AppPort:            getEnv("APP_PORT", "8080"),
-		AppVersion:         getEnv("APP_VERSION", "0.1.0"),
-		HTTPTimeout:        timeout,
-		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		JWTExpiry:          jwtExpiry,
-		EncryptionKey:      encryptionKey,
-		EncryptionKeyBytes: encryptionKeyBytes,
-		AIProvider:         getEnv("INTELLIGATE_AI_PROVIDER", "mock"),
-		AIAPIKey:           getEnv("INTELLIGATE_AI_API_KEY", ""),
-		AIModel:            getEnv("INTELLIGATE_AI_MODEL", ""),
-		AIBaseURL:          getEnv("INTELLIGATE_AI_BASE_URL", ""),
+		DatabaseURL:               getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/intelligate?sslmode=disable"),
+		AppEnv:                    getEnv("APP_ENV", "development"),
+		AppPort:                   getEnv("APP_PORT", "8080"),
+		AppVersion:                getEnv("APP_VERSION", "0.1.0"),
+		HTTPTimeout:               timeout,
+		JWTSecret:                 getEnv("JWT_SECRET", "dev-secret-change-in-production"),
+		JWTExpiry:                 jwtExpiry,
+		EncryptionKey:             encryptionKey,
+		EncryptionKeyBytes:        encryptionKeyBytes,
+		AIProvider:                getEnv("INTELLIGATE_AI_PROVIDER", "mock"),
+		AIAPIKey:                  getEnv("INTELLIGATE_AI_API_KEY", ""),
+		AIModel:                   getEnv("INTELLIGATE_AI_MODEL", ""),
+		AIBaseURL:                 getEnv("INTELLIGATE_AI_BASE_URL", ""),
+		ExibirTokenRedefinicaoDev: GetEnvAsBool("EXIBIR_TOKEN_REDEFINICAO_DEV", false),
 	}, nil
 }
 
