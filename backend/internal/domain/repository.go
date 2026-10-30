@@ -34,6 +34,12 @@ type UsuarioRepository interface {
 	UpdateSenha(ctx context.Context, id uuid.UUID, senhaHash string) error
 	UpdateUltimoLogin(ctx context.Context, id uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// Acesso a lojas
+	AddLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error
+	RemoveLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error
+	ListLojas(ctx context.Context, usuarioID uuid.UUID) ([]*Loja, error)
+	ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]*Usuario, error)
+	CheckLojaAccess(ctx context.Context, usuarioID, lojaID uuid.UUID) (bool, error)
 }
 
 type PapelRepository interface {

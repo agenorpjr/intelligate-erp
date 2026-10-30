@@ -182,9 +182,20 @@ func main() {
 	// Governança de acesso (Etapa 14) - leitura de auditoria
 	auditoriaUsecase := usecase.NewAuditoriaUsecase(auditoriaRepo)
 
+	// Usuários (Etapa 15)
+	usuarioUsecase := usecase.NewUsuarioUsecase(
+		usuarioRepo,
+		usuarioPapelRepo,
+		papelRepo,
+		papelPermissaoRepo,
+		lojaRepo,
+		auditoriaRepo,
+	)
+
 	// Initialize handlers
 	authHandler := httpadapter.NewAuthHandler(authUsecase)
 	lojaHandler := httpadapter.NewLojaHandler(lojaUsecase)
+	usuarioHandler := httpadapter.NewUsuarioHandler(usuarioUsecase)
 	salesHandler := httpadapter.NewSalesHandler(salesUsecase)
 	insumoHandler := httpadapter.NewInsumoHandler(insumoUsecase)
 	produtoHandler := httpadapter.NewProdutoHandler(produtoUsecase)
@@ -308,12 +319,55 @@ func main() {
 				r.Get("/auditoria", auditoriaHandler.Listar)
 			})
 
-			// Usuário-Papel
+			// Usuário-Papel (legacy - mantido para compatibilidade)
 			r.Group(func(r chi.Router) {
 				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosGerenciarPapeis))
 				r.Post("/usuarios/{id}/papeis", papelPermissaoHandler.AssociarUsuarioPapel)
 				r.Delete("/usuarios/{id}/papeis/{papel_id}", papelPermissaoHandler.RemoverUsuarioPapel)
 				r.Get("/usuarios/{id}/papeis", papelPermissaoHandler.ListarPapeisDoUsuario)
+			})
+
+			// Usuários (Etapa 15)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosCriar))
+				r.Post("/usuarios", usuarioHandler.Criar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosListar))
+				r.Get("/usuarios", usuarioHandler.Listar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosVer))
+				r.Get("/usuarios/{id}", usuarioHandler.BuscarPorID)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosAtualizar))
+				r.Put("/usuarios/{id}", usuarioHandler.Atualizar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosDeletar))
+				r.Delete("/usuarios/{id}", usuarioHandler.Desativar)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosAtualizar))
+				r.Post("/usuarios/{id}/reativar", usuarioHandler.Reativar)
+			})
+
+			// Usuário-Papel (novos endpoints)
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosGerenciarPapeis))
+				r.Post("/usuarios/{id}/papeis", usuarioHandler.AssociarPapel)
+				r.Delete("/usuarios/{id}/papeis/{papel_id}", usuarioHandler.RemoverPapel)
+				r.Get("/usuarios/{id}/papeis", usuarioHandler.ListarPapeis)
+				r.Get("/usuarios/{id}/permissoes", usuarioHandler.ListarPermissoesEfetivas)
+			})
+
+			// Usuário-Loja
+			r.Group(func(r chi.Router) {
+				r.Use(rbacMiddleware.RequirePermission(domain.PermUsuariosAtualizar))
+				r.Post("/usuarios/{id}/lojas", usuarioHandler.AdicionarLoja)
+				r.Delete("/usuarios/{id}/lojas/{loja_id}", usuarioHandler.RemoverLoja)
+				r.Get("/usuarios/{id}/lojas", usuarioHandler.ListarLojas)
 			})
 
 			// Insumos

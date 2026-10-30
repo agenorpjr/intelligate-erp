@@ -41,6 +41,21 @@ func (m *authMockUsuarioRepo) UpdateSenha(ctx context.Context, id uuid.UUID, sen
 }
 func (m *authMockUsuarioRepo) UpdateUltimoLogin(ctx context.Context, id uuid.UUID) error { return nil }
 func (m *authMockUsuarioRepo) Delete(ctx context.Context, id uuid.UUID) error            { return nil }
+func (m *authMockUsuarioRepo) AddLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	return nil
+}
+func (m *authMockUsuarioRepo) RemoveLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	return nil
+}
+func (m *authMockUsuarioRepo) ListLojas(ctx context.Context, usuarioID uuid.UUID) ([]*domain.Loja, error) {
+	return nil, nil
+}
+func (m *authMockUsuarioRepo) ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]*domain.Usuario, error) {
+	return nil, nil
+}
+func (m *authMockUsuarioRepo) CheckLojaAccess(ctx context.Context, usuarioID, lojaID uuid.UUID) (bool, error) {
+	return false, nil
+}
 
 type authMockUsuarioPapelRepo struct {
 	associacoes []*domain.UsuarioPapelComDetalhes

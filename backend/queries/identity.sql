@@ -156,3 +156,26 @@ WHERE ($1::uuid IS NULL OR empresa_id = $1)
   AND ($3::text IS NULL OR entidade = $3)
   AND ($4::text IS NULL OR acao = $4)
 ORDER BY created_at DESC LIMIT $5 OFFSET $6;
+
+-- name: CreateUsuarioLoja :one
+INSERT INTO usuario_lojas (usuario_id, loja_id)
+VALUES ($1, $2)
+RETURNING *;
+
+-- name: DeleteUsuarioLoja :exec
+DELETE FROM usuario_lojas WHERE usuario_id = $1 AND loja_id = $2;
+
+-- name: ListLojasByUsuario :many
+SELECT l.* FROM lojas l
+JOIN usuario_lojas ul ON l.id = ul.loja_id
+WHERE ul.usuario_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.created_at DESC;
+
+-- name: ListUsuariosByLoja :many
+SELECT u.* FROM usuarios u
+JOIN usuario_lojas ul ON u.id = ul.usuario_id
+WHERE ul.loja_id = $1 AND u.deleted_at IS NULL
+ORDER BY u.created_at DESC;
+
+-- name: CheckUsuarioLoja :one
+SELECT 1 FROM usuario_lojas WHERE usuario_id = $1 AND loja_id = $2;

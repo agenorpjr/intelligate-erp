@@ -13,6 +13,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkUsuarioLoja = `-- name: CheckUsuarioLoja :one
+SELECT 1 FROM usuario_lojas WHERE usuario_id = $1 AND loja_id = $2
+`
+
+type CheckUsuarioLojaParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	LojaID    uuid.UUID `json:"loja_id"`
+}
+
+func (q *Queries) CheckUsuarioLoja(ctx context.Context, arg CheckUsuarioLojaParams) (int32, error) {
+	row := q.db.QueryRow(ctx, checkUsuarioLoja, arg.UsuarioID, arg.LojaID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createAuditoria = `-- name: CreateAuditoria :one
 INSERT INTO auditoria (empresa_id, usuario_id, entidade, entidade_id, acao, antes, depois, ip, user_agent)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -235,6 +251,29 @@ func (q *Queries) CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (U
 	return i, err
 }
 
+const createUsuarioLoja = `-- name: CreateUsuarioLoja :one
+INSERT INTO usuario_lojas (usuario_id, loja_id)
+VALUES ($1, $2)
+RETURNING id, usuario_id, loja_id, created_at
+`
+
+type CreateUsuarioLojaParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	LojaID    uuid.UUID `json:"loja_id"`
+}
+
+func (q *Queries) CreateUsuarioLoja(ctx context.Context, arg CreateUsuarioLojaParams) (UsuarioLoja, error) {
+	row := q.db.QueryRow(ctx, createUsuarioLoja, arg.UsuarioID, arg.LojaID)
+	var i UsuarioLoja
+	err := row.Scan(
+		&i.ID,
+		&i.UsuarioID,
+		&i.LojaID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUsuarioPapel = `-- name: CreateUsuarioPapel :one
 INSERT INTO usuarios_papeis (usuario_id, papel_id, loja_id)
 VALUES ($1, $2, $3)
@@ -307,6 +346,20 @@ UPDATE usuarios SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1
 
 func (q *Queries) DeleteUsuario(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteUsuario, id)
+	return err
+}
+
+const deleteUsuarioLoja = `-- name: DeleteUsuarioLoja :exec
+DELETE FROM usuario_lojas WHERE usuario_id = $1 AND loja_id = $2
+`
+
+type DeleteUsuarioLojaParams struct {
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	LojaID    uuid.UUID `json:"loja_id"`
+}
+
+func (q *Queries) DeleteUsuarioLoja(ctx context.Context, arg DeleteUsuarioLojaParams) error {
+	_, err := q.db.Exec(ctx, deleteUsuarioLoja, arg.UsuarioID, arg.LojaID)
 	return err
 }
 
@@ -657,6 +710,44 @@ func (q *Queries) ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresa
 	return items, nil
 }
 
+const listLojasByUsuario = `-- name: ListLojasByUsuario :many
+SELECT l.id, l.empresa_id, l.codigo, l.nome, l.endereco, l.fuso_horario, l.ativo, l.created_at, l.updated_at, l.deleted_at FROM lojas l
+JOIN usuario_lojas ul ON l.id = ul.loja_id
+WHERE ul.usuario_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.created_at DESC
+`
+
+func (q *Queries) ListLojasByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]Loja, error) {
+	rows, err := q.db.Query(ctx, listLojasByUsuario, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Loja{}
+	for rows.Next() {
+		var i Loja
+		if err := rows.Scan(
+			&i.ID,
+			&i.EmpresaID,
+			&i.Codigo,
+			&i.Nome,
+			&i.Endereco,
+			&i.FusoHorario,
+			&i.Ativo,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPapeisByEmpresa = `-- name: ListPapeisByEmpresa :many
 SELECT id, empresa_id, nome, descricao, sistema, created_at, updated_at, deleted_at FROM papeis WHERE empresa_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
@@ -856,6 +947,44 @@ type ListUsuariosByEmpresaParams struct {
 
 func (q *Queries) ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error) {
 	rows, err := q.db.Query(ctx, listUsuariosByEmpresa, arg.EmpresaID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Usuario{}
+	for rows.Next() {
+		var i Usuario
+		if err := rows.Scan(
+			&i.ID,
+			&i.EmpresaID,
+			&i.Email,
+			&i.Nome,
+			&i.SenhaHash,
+			&i.Ativo,
+			&i.UltimoLogin,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsuariosByLoja = `-- name: ListUsuariosByLoja :many
+SELECT u.id, u.empresa_id, u.email, u.nome, u.senha_hash, u.ativo, u.ultimo_login, u.created_at, u.updated_at, u.deleted_at FROM usuarios u
+JOIN usuario_lojas ul ON u.id = ul.usuario_id
+WHERE ul.loja_id = $1 AND u.deleted_at IS NULL
+ORDER BY u.created_at DESC
+`
+
+func (q *Queries) ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]Usuario, error) {
+	rows, err := q.db.Query(ctx, listUsuariosByLoja, lojaID)
 	if err != nil {
 		return nil, err
 	}

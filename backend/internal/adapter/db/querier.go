@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	CheckContaGerencialHasMovimentacoes(ctx context.Context, contaGerencialID pgtype.UUID) (bool, error)
+	CheckUsuarioLoja(ctx context.Context, arg CheckUsuarioLojaParams) (int32, error)
 	CreateAgenteMensagem(ctx context.Context, arg CreateAgenteMensagemParams) (AgenteMensagen, error)
 	// ============================================================
 	// Agente de IA para análise gerencial (Etapa 13)
@@ -69,6 +70,7 @@ type Querier interface {
 	CreateRecebimentoCompra(ctx context.Context, arg CreateRecebimentoCompraParams) (RecebimentosCompra, error)
 	CreateRecebimentoCompraItem(ctx context.Context, arg CreateRecebimentoCompraItemParams) (RecebimentoCompraIten, error)
 	CreateUsuario(ctx context.Context, arg CreateUsuarioParams) (Usuario, error)
+	CreateUsuarioLoja(ctx context.Context, arg CreateUsuarioLojaParams) (UsuarioLoja, error)
 	CreateUsuarioPapel(ctx context.Context, arg CreateUsuarioPapelParams) (UsuariosPapei, error)
 	DeleteCategoriaCanonica(ctx context.Context, id uuid.UUID) error
 	DeleteCategoriaFinanceira(ctx context.Context, id uuid.UUID) error
@@ -98,6 +100,7 @@ type Querier interface {
 	DeleteProduto(ctx context.Context, id uuid.UUID) error
 	DeleteProdutoCanonico(ctx context.Context, id uuid.UUID) error
 	DeleteUsuario(ctx context.Context, id uuid.UUID) error
+	DeleteUsuarioLoja(ctx context.Context, arg DeleteUsuarioLojaParams) error
 	DeleteUsuarioPapel(ctx context.Context, id uuid.UUID) error
 	GetAgenteSessao(ctx context.Context, id uuid.UUID) (AgenteSesso, error)
 	GetCMVProdutosDetalhe(ctx context.Context, arg GetCMVProdutosDetalheParams) ([]GetCMVProdutosDetalheRow, error)
@@ -230,6 +233,7 @@ type Querier interface {
 	ListInsumoCustosByInsumo(ctx context.Context, arg ListInsumoCustosByInsumoParams) ([]InsumoCusto, error)
 	ListInsumosByEmpresa(ctx context.Context, arg ListInsumosByEmpresaParams) ([]Insumo, error)
 	ListLojasByEmpresa(ctx context.Context, arg ListLojasByEmpresaParams) ([]Loja, error)
+	ListLojasByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]Loja, error)
 	ListMovimentacoesCaixaByEmpresa(ctx context.Context, arg ListMovimentacoesCaixaByEmpresaParams) ([]MovimentacoesCaixa, error)
 	ListMovimentacoesCaixaByLoja(ctx context.Context, arg ListMovimentacoesCaixaByLojaParams) ([]MovimentacoesCaixa, error)
 	ListMovimentacoesEstoque(ctx context.Context, arg ListMovimentacoesEstoqueParams) ([]ListMovimentacoesEstoqueRow, error)
@@ -253,6 +257,7 @@ type Querier interface {
 	ListRecebimentosCompraByOrdemCompra(ctx context.Context, ordemCompraID uuid.UUID) ([]RecebimentosCompra, error)
 	ListUsuarioPapeisByUsuario(ctx context.Context, usuarioID uuid.UUID) ([]ListUsuarioPapeisByUsuarioRow, error)
 	ListUsuariosByEmpresa(ctx context.Context, arg ListUsuariosByEmpresaParams) ([]Usuario, error)
+	ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]Usuario, error)
 	UpdateAgenteSessaoStatus(ctx context.Context, arg UpdateAgenteSessaoStatusParams) error
 	UpdateCategoriaCanonica(ctx context.Context, arg UpdateCategoriaCanonicaParams) (CategoriasCanonica, error)
 	UpdateCategoriaFinanceira(ctx context.Context, arg UpdateCategoriaFinanceiraParams) (CategoriasFinanceira, error)

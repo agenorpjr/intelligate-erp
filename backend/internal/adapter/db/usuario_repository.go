@@ -107,6 +107,61 @@ func (r *UsuarioRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.querier.DeleteUsuario(ctx, id)
 }
 
+// AddLoja associa um usuário a uma loja
+func (r *UsuarioRepository) AddLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	_, err := r.querier.CreateUsuarioLoja(ctx, CreateUsuarioLojaParams{
+		UsuarioID: usuarioID,
+		LojaID:    lojaID,
+	})
+	return err
+}
+
+// RemoveLoja remove a associação de um usuário a uma loja
+func (r *UsuarioRepository) RemoveLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	return r.querier.DeleteUsuarioLoja(ctx, DeleteUsuarioLojaParams{
+		UsuarioID: usuarioID,
+		LojaID:    lojaID,
+	})
+}
+
+// ListLojas lista as lojas associadas a um usuário
+func (r *UsuarioRepository) ListLojas(ctx context.Context, usuarioID uuid.UUID) ([]*domain.Loja, error) {
+	results, err := r.querier.ListLojasByUsuario(ctx, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+	lojas := make([]*domain.Loja, len(results))
+	for i, l := range results {
+		lojas[i] = toDomainLoja(l)
+	}
+	return lojas, nil
+}
+
+// ListUsuariosByLoja lista os usuários associados a uma loja
+func (r *UsuarioRepository) ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]*domain.Usuario, error) {
+	results, err := r.querier.ListUsuariosByLoja(ctx, lojaID)
+	if err != nil {
+		return nil, err
+	}
+	usuarios := make([]*domain.Usuario, len(results))
+	for i, u := range results {
+		usuarios[i] = toDomainUsuario(u)
+	}
+	return usuarios, nil
+}
+
+// CheckLojaAccess verifica se um usuário tem acesso a uma loja
+func (r *UsuarioRepository) CheckLojaAccess(ctx context.Context, usuarioID, lojaID uuid.UUID) (bool, error) {
+	result, err := r.querier.CheckUsuarioLoja(ctx, CheckUsuarioLojaParams{
+		UsuarioID: usuarioID,
+		LojaID:    lojaID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return result == 1, nil
+}
+
 func toDomainUsuario(u Usuario) *domain.Usuario {
 	var ultimoLogin *time.Time
 	if u.UltimoLogin.Valid {

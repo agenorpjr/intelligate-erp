@@ -460,6 +460,13 @@ type Usuario struct {
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type UsuarioLoja struct {
+	ID        uuid.UUID `json:"id"`
+	UsuarioID uuid.UUID `json:"usuario_id"`
+	LojaID    uuid.UUID `json:"loja_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type UsuariosPapei struct {
 	ID        uuid.UUID   `json:"id"`
 	UsuarioID uuid.UUID   `json:"usuario_id"`

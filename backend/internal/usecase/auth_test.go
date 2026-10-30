@@ -14,11 +14,13 @@ import (
 
 type mockUsuarioRepository struct {
 	usuarios map[string]*domain.Usuario
+	lojas    map[string][]*domain.Loja
 }
 
 func newMockUsuarioRepository() *mockUsuarioRepository {
 	return &mockUsuarioRepository{
 		usuarios: make(map[string]*domain.Usuario),
+		lojas:    make(map[string][]*domain.Loja),
 	}
 }
 
@@ -94,6 +96,26 @@ func (m *mockUsuarioRepository) Delete(ctx context.Context, id uuid.UUID) error 
 		}
 	}
 	return nil
+}
+
+func (m *mockUsuarioRepository) AddLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockUsuarioRepository) RemoveLoja(ctx context.Context, usuarioID, lojaID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockUsuarioRepository) ListLojas(ctx context.Context, usuarioID uuid.UUID) ([]*domain.Loja, error) {
+	return nil, nil
+}
+
+func (m *mockUsuarioRepository) ListUsuariosByLoja(ctx context.Context, lojaID uuid.UUID) ([]*domain.Usuario, error) {
+	return nil, nil
+}
+
+func (m *mockUsuarioRepository) CheckLojaAccess(ctx context.Context, usuarioID, lojaID uuid.UUID) (bool, error) {
+	return false, nil
 }
 
 // mockUsuarioPapelRepository implementa domain.UsuarioPapelRepository para testes.
